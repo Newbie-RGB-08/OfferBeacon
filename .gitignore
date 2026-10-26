@@ -1,0 +1,11 @@
+# Android SDK（本地安装，可通过 sdkmanager 重建）
+sdk/
+
+# 构建中间产物（build.sh 可再生）
+build/
+*.idsig
+
+# 临时文件
+*.tmp
+.DS_Store
+Thumbs.db

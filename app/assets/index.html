@@ -1,0 +1,4155 @@
+<!DOCTYPE html>
+<html data-page-node-id="st5DiKjRqDBAj3XqBlkE8y" data-theme="light" lang="zh-CN">
+<head data-page-node-id="TBuJ3bhm8KgIXdIdsFHysE">
+<script data-page-node-id="lBeXyfhDE8iP7kFwKICbUo" src="/page/page_comm/inject.js"></script>
+<meta data-page-node-id="nIHXVyekq6OqYKD9pY3gI5" charset="UTF-8">
+<meta data-page-node-id="n5Oe9pFNRmKrNU3cPYjtut" content="width=device-width, initial-scale=1.0" name="viewport">
+<title data-page-node-id="K3CiloXcuxP7U4kIwGPlrW" data-pnid-children="CpARkjFJEULUCYaTwhSOBh">投递记录</title>
+<style data-page-node-id="FmMMr2tL41UCanBjqtAx5o" data-pnid-children="Hkj0eWEb908qv4WDskIsTn">
+  /* ===== Design tokens (data-viz palette) ===== */
+  .tracker-root {
+    /* 现代蓝调主题 */
+    --surface-1:      #f4f7fc;
+    --text-primary:   #0a1428;
+    --text-secondary: #46516c;
+    --muted:          #7d88a5;
+    --gridline:       #dbe4f2;
+    --border:         rgba(16,40,90,0.12);
+
+    /* Categorical — for series identity if needed */
+    --series-1: #2563eb;
+
+    /* 状态色调整至更清透的版本，保持语义区分 */
+    --status-good:     #0ca30c;
+    --status-warning:  #fab219;
+    --status-serious:  #ec835a;
+    --status-critical: #d03b3b;
+
+    /* Extended status steps — distinct from categorical, within status family */
+    --status-info:     #2563eb;   /* 已投简历 = 信息性 */
+    --status-pending:  #6ea8f7;   /* 已过初筛 = 进行中，较浅 */
+
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .tracker-root {
+      --surface-1:      #0d1524;
+      --text-primary:   #eaf2ff;
+      --text-secondary: #a7b4cf;
+      --muted:          #74819f;
+      --gridline:       #16223a;
+      --border:         rgba(180,200,240,0.12);
+      --status-good:     #0ca30c;
+      --status-warning:  #fab219;
+      --status-serious:  #ec835a;
+      --status-critical: #e66767;
+      --status-info:     #5b9cf6;
+      --status-pending:  #8fbcf8;
+    }
+  }
+
+  :root[data-theme="dark"] .tracker-root {
+    --surface-1:      #0d1524;
+    --text-primary:   #eaf2ff;
+    --text-secondary: #a7b4cf;
+    --muted:          #74819f;
+    --gridline:       #16223a;
+    --border:         rgba(180,200,240,0.12);
+    --status-good:     #0ca30c;
+    --status-warning:  #fab219;
+    --status-serious:  #ec835a;
+    --status-critical: #e66767;
+    --status-info:     #5b9cf6;
+    --status-pending:  #8fbcf8;
+  }
+
+  /* ===== Theme toggle ===== */
+  .theme-toggle {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 100;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: opacity 0.15s;
+    user-select: none;
+  }
+  .theme-toggle:hover { opacity: 0.8; }
+
+  /* ===== Layout ===== */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background:
+      radial-gradient(1200px 500px at 20% -10%, rgba(37,99,235,0.10), transparent 60%),
+      radial-gradient(1000px 460px at 90% 0%, rgba(110,168,247,0.12), transparent 55%),
+      var(--surface-1);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding-left: 230px; /* 侧边栏宽度 */
+    transition: padding-left 0.22s ease;
+  }
+  body.sb-collapsed { padding-left: 56px; }
+
+  .tracker-root {
+    width: 100%;
+    max-width: 1200px;
+    padding: 96px 24px 80px; /* 顶部留出吸顶导航的高度 */
+  }
+
+  /* ===== Header ===== */
+  .tracker-header {
+    margin-bottom: 18px;
+  }
+  .tracker-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+    background: linear-gradient(120deg, var(--series-1), #6ea8f7);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .tracker-header .title-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .tracker-header .title-row h1 { margin-bottom: 0; }
+  .track-chip {
+    display: inline-flex;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: rgba(37,99,235,0.10);
+    border: 1px solid rgba(37,99,235,0.28);
+    color: var(--series-1);
+    white-space: nowrap;
+    transform: translateY(-3px);
+  }
+.tracker-header .subtitle {
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+  /* ===== 总览（精简卡片） ===== */
+  .overview-card {
+    margin-bottom: 24px;
+    padding: 12px 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--gridline) 18%, transparent);
+  }
+  .overview-card .stats-row {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .stat-tile {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 0 16px;
+  }
+  .stat-tile:first-child { padding-left: 0; }
+  .stat-tile + .stat-tile { border-left: 1px solid var(--border); }
+  .stat-tile .stat-value {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  .stat-tile .stat-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  /* ===== Filters ===== */
+  .filter-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filter-bar input,
+  .filter-bar select {
+    font-family: inherit;
+    font-size: 13px;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface-1);
+    color: var(--text-primary);
+    outline: none;
+  }
+  .filter-bar input::placeholder { color: var(--muted); }
+  .filter-bar input:focus,
+  .filter-bar select:focus {
+    border-color: var(--series-1);
+  }
+  .filter-bar label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .btn-reset {
+    font-family: inherit;
+    font-size: 13px;
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+  .btn-reset:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+  }
+
+  /* ===== Table ===== */
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    table-layout: auto;
+  }
+
+  thead {
+    background: var(--gridline);
+  }
+  thead th {
+    text-align: left;
+    padding: 12px 16px;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-secondary);
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    user-select: none;
+    cursor: pointer;
+    position: relative;
+  }
+  thead th:hover {
+    color: var(--text-primary);
+  }
+  thead th .sort-icon {
+    display: inline-block;
+    margin-left: 4px;
+    opacity: 0.3;
+  }
+  thead th.sorted-asc .sort-icon,
+  thead th.sorted-desc .sort-icon {
+    opacity: 1;
+  }
+  thead th.sorted-asc .sort-icon::after { content: "▲"; }
+  thead th.sorted-desc .sort-icon::after { content: "▼"; }
+  thead th .sort-icon::after { content: "▽"; }
+
+  tbody tr {
+    border-top: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+  tbody tr:hover {
+    background: color-mix(in srgb, var(--gridline) 50%, transparent);
+  }
+
+  tbody td {
+    padding: 12px 16px;
+    vertical-align: middle;
+  }
+
+  /* ===== Status badge ===== */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    line-height: 1.5;
+  }
+  .status-badge::before {
+    content: "";
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* — Status color assignments (distinct from categorical, status-only) — */
+  .status-resume         { background: #e3edfe; color: #1d4ed8; }
+  .status-resume::before { background: #2563eb; }              /* 已投简历 — 蓝色 */
+  .status-screening      { background: #e3f2e8; color: #0b7a3a; }
+  .status-screening::before { background: #1baf7a; }           /* 已过初筛 — 绿色 */
+  .status-interview      { background: #fff1e0; color: #b85a00; }
+  .status-interview::before { background: #eb6834; }           /* 面试 — 橙色 */
+  .status-hr             { background: #ece9fd; color: #5b41b8; }
+  .status-hr::before     { background: #6d5ae0; }              /* hr筛选 — 紫色 */
+  .status-biz            { background: #fff8e0; color: #946800; }
+  .status-biz::before    { background: #eda100; }              /* 业务筛选 — 黄色 */
+  .status-rejected       { background: #fde8e8; color: #b91c1c; }
+  .status-rejected::before { background: #e34948; }            /* 挂 — 红色 */
+  .status-evaluating     { background: #e0f2ff; color: #0369a1; }
+  .status-evaluating::before { background: #3987e5; }          /* 评估中 — 浅蓝 */
+  .status-offer          { background: #d1fae5; color: #047857; }
+  .status-offer::before  { background: #0ca30c; }              /* 等offer — 亮绿 (status-good) */
+  .status-ai             { background: #e0f3ee; color: #0f766e; }
+  .status-ai::before     { background: #14b8a6; }              /* 待AI面试 — 青绿 */
+  .status-online-assess             { background: #fbe8f1; color: #b3216b; }
+  .status-online-assess::before     { background: #e0519c; }          /* 待线上测评 — 品红 */
+
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+    .status-resume         { background: #14294d; color: #93c0fb; }
+    .status-resume::before { background: #5b9cf6; }
+    .status-screening      { background: #1a3328; color: #34d399; }
+    .status-screening::before { background: #199e70; }
+    .status-interview      { background: #3d2215; color: #fdba74; }
+    .status-interview::before { background: #d95926; }
+    .status-hr             { background: #2a2352; color: #c6bcfc; }
+    .status-hr::before     { background: #8f82f0; }
+    .status-biz            { background: #3d3410; color: #fbbf24; }
+    .status-biz::before    { background: #c98500; }
+    .status-rejected       { background: #451a1a; color: #fca5a5; }
+    .status-rejected::before { background: #e66767; }
+    .status-evaluating     { background: #0a2a40; color: #7dd3fc; }
+    .status-evaluating::before { background: #6da7ec; }
+    .status-offer          { background: #0a2e1a; color: #6ee7b7; }
+    .status-offer::before  { background: #0ca30c; }
+    .status-ai             { background: #0a2a26; color: #5eead4; }
+    .status-ai::before     { background: #14b8a6; }
+    .status-online-assess { background: #361428; color: #f9a8d4; }
+    .status-online-assess::before { background: #e0519c; }
+    }
+  }
+  :root[data-theme="dark"] {
+    .status-resume         { background: #14294d; color: #93c0fb; }
+    .status-resume::before { background: #5b9cf6; }
+    .status-screening      { background: #1a3328; color: #34d399; }
+    .status-screening::before { background: #199e70; }
+    .status-interview      { background: #3d2215; color: #fdba74; }
+    .status-interview::before { background: #d95926; }
+    .status-hr             { background: #2a2352; color: #c6bcfc; }
+    .status-hr::before     { background: #8f82f0; }
+    .status-biz            { background: #3d3410; color: #fbbf24; }
+    .status-biz::before    { background: #c98500; }
+    .status-rejected       { background: #451a1a; color: #fca5a5; }
+    .status-rejected::before { background: #e66767; }
+    .status-evaluating     { background: #0a2a40; color: #7dd3fc; }
+    .status-evaluating::before { background: #6da7ec; }
+    .status-offer          { background: #0a2e1a; color: #6ee7b7; }
+    .status-offer::before  { background: #0ca30c; }
+    .status-ai             { background: #0a2a26; color: #5eead4; }
+    .status-ai::before     { background: #14b8a6; }
+    .status-online-assess { background: #361428; color: #f9a8d4; }
+    .status-online-assess::before { background: #e0519c; }
+  }
+
+  /* ===== Empty state ===== */
+  .empty-state {
+    text-align: center;
+    padding: 48px 16px;
+    color: var(--muted);
+  }
+  .empty-state p {
+    margin-top: 8px;
+    font-size: 14px;
+  }
+
+  /* ===== 投递节奏统计（每日 / 每周，精简） ===== */
+  .rhythm-section {
+    margin-top: 2px;
+  }
+  .rhythm-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* 每日投递数量条 */
+  .daily-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .daily-tile {
+    flex: 1 1 auto;
+    min-width: 44px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .daily-tile.is-today {
+    border-color: var(--series-1);
+    box-shadow: inset 0 -2px 0 var(--series-1);
+  }
+  .daily-tile .d-label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .daily-tile .d-label.today {
+    color: var(--series-1);
+    font-weight: 600;
+  }
+  .daily-tile .d-value {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--text-primary);
+  }
+
+  /* 每周投递量柱状图 */
+  .weekly-wrap {
+    overflow-x: auto;
+  }
+  .weekly-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    height: 60px;
+    min-width: 520px;
+    padding-top: 4px;
+  }
+  .weekly-col {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    height: 100%;
+    justify-content: flex-end;
+  }
+  .weekly-bar {
+    width: 100%;
+    max-width: 46px;
+    background: var(--series-1);
+    border-radius: 4px 4px 0 0;
+    min-height: 2px;
+    transition: height 0.3s ease;
+    opacity: 0.9;
+  }
+  .weekly-bar:hover { opacity: 1; }
+  .weekly-bar.zero {
+    background: var(--gridline);
+    opacity: 0.6;
+  }
+  .weekly-val {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--text-primary);
+    height: 16px;
+  }
+  .weekly-label {
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .weekly-col.is-current .weekly-label {
+    color: var(--series-1);
+    font-weight: 600;
+  }
+
+  @media (max-width: 640px) {
+    .rhythm-section { padding: 12px; }
+    .weekly-chart { height: 80px; }
+    border-collapse: collapse;
+    font-size: 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .watchlist-tbl thead {
+    background: var(--gridline);
+  }
+  .watchlist-tbl thead th {
+    text-align: left;
+    padding: 12px 16px;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-secondary);
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+  .watchlist-tbl tbody tr {
+    border-top: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+  .watchlist-tbl tbody tr:hover {
+    background: color-mix(in srgb, var(--gridline) 50%, transparent);
+  }
+  .watchlist-tbl tbody td {
+    padding: 12px 16px;
+    vertical-align: middle;
+  }
+  .watch-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .watch-date .date-val {
+    color: var(--status-warning);
+    font-weight: 500;
+  }
+  .watch-note {
+    color: var(--text-secondary);
+    max-width: 260px;
+  }
+  .watch-note a {
+    color: var(--series-1);
+    text-decoration: underline;
+    word-break: break-all;
+  }
+  /* 关注清单区块（可折叠） */
+  .watchlist-section {
+    margin-bottom: 24px;
+    padding: 16px 18px;
+    background: color-mix(in srgb, var(--series-1) 4%, transparent);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .watchlist-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .watchlist-header h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .watchlist-header #watchlistCaret { display: inline-block; transition: transform 0.15s; }
+  .watchlist-section.collapsed #watchlistCaret { transform: rotate(-90deg); }
+  .watchlist-section.collapsed .watchlist-body { display: none; }
+  .watchlist-body { padding-top: 2px; }
+  /* 关注清单卡片（每行三家） */
+  .watch-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .watch-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 14px;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    transition: border-color 0.1s, box-shadow 0.12s, transform 0.12s;
+  }
+  .watch-card:hover {
+    border-color: color-mix(in srgb, var(--series-1) 45%, transparent);
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--gridline) 60%, transparent);
+    transform: translateY(-1px);
+  }
+  .wc-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+  }
+  .wc-head strong {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+  .wc-tag {
+    flex: none;
+    font-size: 11px;
+    color: var(--series-1);
+    background: color-mix(in srgb, var(--series-1) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--series-1) 30%, transparent);
+    border-radius: 999px;
+    padding: 1px 8px;
+    white-space: nowrap;
+  }
+  .wc-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .wc-note {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .wc-note a {
+    color: var(--series-1);
+    text-decoration: underline;
+    word-break: break-all;
+  }
+  .wc-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 2px;
+  }
+  .wc-actions button {
+    flex: 1;
+    font-family: inherit;
+    font-size: 12px;
+    padding: 5px 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+  .wc-actions button:hover {
+    border-color: var(--series-1);
+    color: var(--series-1);
+  }
+  .wc-actions .watch-add {
+    border-color: color-mix(in srgb, var(--series-1) 50%, transparent);
+    color: var(--series-1);
+  }
+  @media (max-width: 960px) { .watch-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .watch-grid { grid-template-columns: 1fr; } }
+  .record-note {
+    color: var(--text-secondary);
+    max-width: 220px;
+    word-break: break-all;
+  }
+  .record-note a {
+    color: var(--series-1);
+    text-decoration: underline;
+  }
+  @media (max-width: 640px) {
+    .watchlist-tbl thead th,
+    .watchlist-tbl tbody td { padding: 8px 10px; font-size: 13px; }
+  }
+
+  /* ===== 秋招筛子：已开放待筛选 ===== */
+  .sieve-section {
+    margin-bottom: 24px;
+    padding: 16px 18px;
+    background: color-mix(in srgb, var(--series-1) 4%, transparent);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .sieve-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .sieve-header h2 { font-size: 16px; font-weight: 600; }
+  #sieveCaret {
+    display: inline-block;
+    transition: transform 0.2s;
+  }
+  .sieve-section.collapsed #sieveCaret {
+    transform: rotate(-90deg);
+  }
+  .sieve-section.collapsed .sieve-body { display: none; }
+  .sieve-count {
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: color-mix(in srgb, var(--series-1) 12%, transparent);
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-weight: 500;
+  }
+  .sieve-batch {
+    margin-bottom: 12px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-1);
+  }
+  .sieve-batch textarea {
+    width: 100%;
+    font-family: inherit;
+    font-size: 13px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface-1);
+    color: var(--text-primary);
+    outline: none;
+    resize: vertical;
+  }
+  .sieve-batch textarea:focus { border-color: var(--series-1); }
+  .sieve-batch textarea::placeholder { color: var(--muted); }
+  .sieve-batch-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .sieve-batch-row input {
+    flex: 1 1 160px;
+    font-family: inherit;
+    font-size: 13px;
+    padding: 7px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface-1);
+    color: var(--text-primary);
+    outline: none;
+  }
+  .sieve-batch-row input:focus { border-color: var(--series-1); }
+  .sieve-batch-row input::placeholder { color: var(--muted); }
+  .sieve-url {
+    display: inline-block;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  /* ===== 筛子标签流：一行多个企业 ===== */
+  .sieve-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-content: flex-start;
+  }
+  .sieve-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-1);
+    max-width: 100%;
+  }
+  /* 已投过：绿色标记 */
+  .sieve-chip.is-applied {
+    background: color-mix(in srgb, var(--status-good) 10%, var(--surface-1));
+    border-color: color-mix(in srgb, var(--status-good) 45%, transparent);
+  }
+  .sieve-chip.is-applied strong { color: var(--status-good); }
+  .applied-tag {
+    flex: none;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    padding: 3px 6px;
+    border-radius: 6px;
+    color: var(--status-good);
+    background: color-mix(in srgb, var(--status-good) 14%, transparent);
+    white-space: nowrap;
+  }
+  /* 搜索过滤隐藏 */
+  .sieve-chip.is-hidden { display: none; }
+  /* 头部查找框 */
+  .sieve-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-left: auto;
+  }
+  .sieve-tools input {
+    font-family: inherit;
+    font-size: 13px;
+    padding: 6px 10px;
+    width: 150px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-1);
+    color: var(--text-primary);
+    outline: none;
+  }
+  .sieve-tools input:focus { border-color: var(--series-1); }
+  .sieve-tools input::placeholder { color: var(--muted); }
+  .sieve-chip strong {
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+  }
+  .sieve-chip-link {
+    text-decoration: none;
+    font-size: 13px;
+    line-height: 1;
+    flex: none;
+  }
+  .sieve-chip button {
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    flex: none;
+  }
+  .sieve-chip .sieve-add {
+    border: none;
+    background: var(--series-1);
+    color: #fff;
+    font-weight: 600;
+  }
+  .sieve-chip .sieve-del {
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+  }
+
+  /* ===== Quick add bar ===== */
+  .quick-add {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 14px 16px;
+    background: color-mix(in srgb, var(--gridline) 35%, transparent);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .quick-add .qa-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    margin-right: 2px;
+  }
+  .quick-add input,
+  .quick-add select {
+    font-family: inherit;
+    font-size: 13px;
+    padding: 7px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface-1);
+    color: var(--text-primary);
+    outline: none;
+  }
+  .quick-add input:focus,
+  .quick-add select:focus {
+    border-color: var(--series-1);
+  }
+  .quick-add input::placeholder { color: var(--muted); }
+  .quick-add input#qaCompany { flex: 2 1 180px; min-width: 160px; }
+  .quick-add input#qaPosition { flex: 2 1 200px; min-width: 160px; }
+
+  /* ===== Add form ===== */
+  .add-form {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .add-form input,
+  .add-form select {
+    font-family: inherit;
+    font-size: 13px;
+    padding: 7px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface-1);
+    color: var(--text-primary);
+    outline: none;
+  }
+  .add-form input:focus,
+  .add-form select:focus {
+    border-color: var(--series-1);
+  }
+  .add-form input::placeholder { color: var(--muted); }
+  .btn-add {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 18px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--series-1), #3b82f6);
+    color: #fff;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.05s, box-shadow 0.15s;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.25);
+  }
+  .btn-add:hover { opacity: 0.92; box-shadow: 0 4px 14px rgba(37,99,235,0.32); }
+  .btn-add:active { transform: translateY(1px); }
+
+  .btn-delete {
+    font-family: inherit;
+    font-size: 12px;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+  .btn-delete:hover {
+    color: var(--status-critical);
+    border-color: var(--status-critical);
+  }
+
+  .btn-edit:hover {
+    color: var(--series-1);
+    border-color: var(--series-1);
+  }
+
+  /* ===== Modal for add/edit ===== */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.active {
+    display: flex;
+  }
+  .modal {
+    background: var(--surface-1);
+    border-radius: 12px;
+    padding: 28px;
+    width: 440px;
+    max-width: 90vw;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  }
+  .modal h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  .modal .form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 14px;
+  }
+  .modal .form-row label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+  .modal .form-row input,
+  .modal .form-row select {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface-1);
+    color: var(--text-primary);
+    outline: none;
+  }
+  .modal .form-row input:focus,
+  .modal .form-row select:focus,
+  .modal .form-row textarea:focus {
+    border-color: var(--series-1);
+  }
+  .modal .modal-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 8px;
+  }
+  .modal .modal-actions button {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 20px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .modal .btn-cancel {
+    background: transparent;
+    color: var(--text-secondary);
+  }
+  .modal .btn-save {
+    background: linear-gradient(135deg, var(--series-1), #3b82f6);
+    color: #fff;
+    border: none !important;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.25);
+  }
+
+  /* ===== 重复企业检测提示 ===== */
+  .dup-hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 4px 0 14px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--status-warning) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--status-warning) 45%, transparent);
+    font-size: 13px;
+    color: var(--status-serious);
+  }
+  .dup-hint .dup-btn {
+    font-family: inherit;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface-1);
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+  .dup-hint .dup-btn:hover {
+    border-color: var(--text-secondary);
+    color: var(--text-primary);
+  }
+  .dup-hint .dup-go {
+    background: linear-gradient(135deg, var(--series-1), #3b82f6);
+    border-color: transparent;
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(37,99,235,0.25);
+  }
+  .dup-hint .dup-go:hover {
+    opacity: 0.88;
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(37,99,235,0.32);
+  }
+
+  /* ===== Legend / status key ===== */
+  .status-key {
+    display: flex;
+    gap: 6px 16px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background: color-mix(in srgb, var(--gridline) 40%, transparent);
+    border-radius: 8px;
+    font-size: 13px;
+  }
+  .status-key .key-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-secondary);
+  }
+  .status-key .key-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 640px) {
+    .tracker-root { padding: 20px 12px 60px; }
+    .tracker-header h1 { font-size: 22px; }
+    .filter-bar { flex-direction: column; align-items: stretch; }
+    thead th, tbody td { padding: 8px 10px; font-size: 13px; }
+    .add-form { flex-direction: column; }
+    .quick-add { flex-direction: column; align-items: stretch; }
+    .quick-add input#qaCompany,
+    .quick-add input#qaPosition { min-width: 0; flex: 1 1 auto; }
+    .status-key { font-size: 12px; gap: 4px 12px; }
+  }
+
+  /* ===== 投递记录：两列卡片 ===== */
+  .rec-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .rec-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-1);
+    transition: border-color 0.1s;
+  }
+  .rec-card:hover { border-color: color-mix(in srgb, var(--series-1) 45%, transparent); }
+  .rec-card.rc-dead { opacity: 0.62; }
+  .rc-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .rc-head strong {
+    flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-size: 14px;
+  }
+  .rc-meta {
+    display: flex; flex-wrap: wrap; gap: 4px 14px;
+    font-size: 12.5px; color: var(--text-secondary);
+  }
+  .rc-meta .rc-pos { color: var(--text-primary); font-weight: 500; }
+  .rc-note {
+    font-size: 12.5px; color: var(--text-secondary); line-height: 1.5;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .rc-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 2px; }
+  .rc-actions button {
+    font-family: inherit; font-size: 12px; padding: 4px 10px;
+    border: 1px solid var(--border); border-radius: 6px;
+    background: transparent; color: var(--text-secondary);
+    cursor: pointer; transition: all 0.1s;
+  }
+  .rc-actions button:hover { border-color: var(--series-1); color: var(--series-1); }
+
+  /* 视图模式：详细（一行一家）/ 紧凑（一行四家） */
+  .rec-grid.rv-detail { grid-template-columns: 1fr; }
+  .rec-grid.rv-compact { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 960px) { .rec-grid.rv-compact { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .rec-grid.rv-compact { grid-template-columns: 1fr; } }
+
+  /* 紧凑小卡：公司名 + 状态，底色区分状态 */
+  .rec-mini {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.1s, filter 0.1s;
+  }
+  .rec-mini:hover { transform: translateY(-1px); filter: brightness(1.03); }
+  .rec-mini .rm-name {
+    font-size: 13px; font-weight: 600; color: var(--text-primary);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .rec-mini .rm-status { font-size: 11.5px; font-weight: 600; }
+
+  /* 视图切换按钮 */
+  .view-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .vt-btn {
+    font-family: inherit; font-size: 12.5px; padding: 6px 12px;
+    border: none; background: transparent; color: var(--text-secondary);
+    cursor: pointer; transition: all 0.12s;
+  }
+  .vt-btn + .vt-btn { border-left: 1px solid var(--border); }
+  .vt-btn:hover { color: var(--text-primary); }
+  .vt-btn.is-active { background: var(--series-1); color: #fff; font-weight: 600; }
+
+  /* ===== 日程规划（面试 / 笔试等流程安排） ===== */
+  .sched-section { margin-bottom: 24px; }
+  .sched-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .sched-header h2 {
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+  }
+  .sched-header h2:hover { color: var(--series-1); }
+  #schedCaret {
+    display: inline-block;
+    transition: transform 0.2s;
+  }
+  .sched-section.collapsed #schedCaret { transform: rotate(-90deg); }
+  .sched-section.collapsed .sched-body { display: none; }
+  .sched-form {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .sched-form input, .sched-form select {
+    font-family: inherit;
+    font-size: 13px;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-1);
+    color: var(--text-primary);
+  }
+  .sched-form input:focus, .sched-form select:focus {
+    outline: none;
+    border-color: var(--series-1);
+  }
+  .sched-form input::placeholder { color: var(--muted); }
+  .sched-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .sched-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-1);
+    transition: border-color 0.1s;
+  }
+  .sched-item.is-soon { border-left: 3px solid var(--status-warning); }
+  .sched-item.is-past { opacity: 0.55; }
+  .sched-item.is-done { opacity: 0.55; }
+  .sched-item.is-done .s-company { text-decoration: line-through; }
+  .sched-when {
+    min-width: 72px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .sched-when .s-date {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+  }
+  .sched-when .s-time {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+  .sched-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .sched-main .s-company {
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .sched-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid;
+    white-space: nowrap;
+  }
+  .sched-note {
+    font-size: 12px;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 320px;
+  }
+  .sched-rel {
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .sched-actions { display: flex; gap: 6px; }
+  .sched-actions button {
+    font-family: inherit;
+    font-size: 12px;
+    width: 26px;
+    height: 26px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+  .sched-actions .sc-done:hover { border-color: var(--status-good); color: var(--status-good); }
+  /* ===== 侧边栏基础样式 ===== */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 230px;
+    height: 100vh;
+    overflow-y: auto;
+    background: var(--surface-1);
+    border-right: 1px solid var(--border);
+    padding: 12px 10px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 20;
+  }
+  .sidebar .sb-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px 8px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2px;
+  }
+  .sidebar .sb-logo { font-size: 18px; line-height: 1; }
+  .sidebar .sb-title { flex: 1; font-size: 14px; font-weight: 600; color: var(--text-primary); }
+  .sidebar .sb-toggle {
+    font-family: inherit;
+    font-size: 13px;
+    width: 22px; height: 22px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    line-height: 1;
+    transition: all 0.1s;
+  }
+  .sidebar .sb-toggle:hover { border-color: var(--series-1); color: var(--series-1); }
+  .sidebar .sb-track {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 13.5px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.12s;
+  }
+  .sidebar .sb-track:hover { border-color: color-mix(in srgb, var(--series-1) 40%, transparent); }
+  .sidebar .sb-track.is-active {
+    background: color-mix(in srgb, var(--series-1) 12%, transparent);
+    border-color: color-mix(in srgb, var(--series-1) 50%, transparent);
+    color: var(--series-1);
+    font-weight: 600;
+  }
+  .sidebar .sb-icon { font-size: 16px; line-height: 1; }
+  .sidebar .sb-name { flex: 1; }
+  .sidebar .sb-count {
+    font-size: 11px;
+    min-width: 20px;
+    text-align: center;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--gridline) 70%, transparent);
+    color: var(--text-secondary);
+  }
+  .sidebar .sb-track.is-active .sb-count {
+    background: color-mix(in srgb, var(--series-1) 22%, transparent);
+    color: var(--series-1);
+  }
+  /* ===== 日程规划（整页视图 · 单列线性时间线） ===== */
+  .sb-sep { height: 1px; background: var(--border); margin: 2px 4px; }
+  #scheduleView { display: none; }
+  #scheduleView.active { display: block; }
+  #mainTrackView.hidden { display: none; }
+  body.view-schedule .nav-bar { display: none; }
+
+  .sv-head {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px; margin-bottom: 16px;
+  }
+  .sv-title {
+    display: flex; align-items: baseline; gap: 10px;
+    font-size: 20px; font-weight: 700; color: var(--text-primary);
+  }
+  .sv-title .sv-sub { font-size: 13px; font-weight: 400; color: var(--muted); }
+  .sv-nav { display: flex; align-items: center; gap: 6px; }
+  .sv-btn {
+    font-family: inherit; font-size: 12.5px; padding: 6px 14px; cursor: pointer;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface-1); color: var(--text-secondary);
+    transition: border-color .12s, color .12s;
+  }
+  .sv-btn:hover { border-color: var(--series-1); color: var(--series-1); }
+  .sv-month {
+    font-size: 15px; font-weight: 600; color: var(--text-primary);
+    min-width: 92px; text-align: center;
+    cursor: pointer; user-select: none; border-radius: 8px;
+    padding: 4px 8px; transition: background .12s;
+  }
+  .sv-month:hover { background: color-mix(in srgb, var(--gridline) 55%, transparent); }
+
+  .sv-layout {
+    display: grid; gap: 16px; align-items: start;
+    grid-template-columns: minmax(0, 1.6fr) minmax(290px, 1fr);
+  }
+  .sv-layout > .sv-card.wide { grid-column: 1 / -1; }
+  .sv-side { display: flex; flex-direction: column; gap: 16px; }
+  @media (max-width: 980px) { .sv-layout { grid-template-columns: 1fr; } }
+
+  .sv-card {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px 18px;
+  }
+  .sv-sec-title {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 13.5px; font-weight: 600; color: var(--text-primary);
+    margin-bottom: 10px;
+  }
+  .sv-sec-title .sc-clear {
+    border: none; background: transparent; color: var(--muted); cursor: pointer;
+    font-size: 11.5px; padding: 2px 6px; border-radius: 6px;
+  }
+  .sv-sec-title .sc-clear:hover { color: var(--text-primary); background: color-mix(in srgb, var(--gridline) 60%, transparent); }
+
+  /* ===== 月份日历（右侧面板 · 与时间线联动） ===== */
+  .sv-cal-head {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-bottom: 10px;
+  }
+  .sv-cal-head .sv-month { min-width: 84px; cursor: default; }
+  .sv-cal-head .sv-month:hover { background: transparent; }
+  .sv-cal-dows, #sbCalGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .sv-cal-dows span {
+    font-size: 11px; font-weight: 600; text-align: center;
+    color: var(--muted); padding-bottom: 2px;
+  }
+  .sv-cell {
+    position: relative; min-height: 52px; padding: 3px 4px;
+    border: 1px solid transparent; border-radius: 8px; cursor: pointer;
+    display: flex; flex-direction: column; gap: 3px; align-items: flex-start;
+    transition: background .12s, border-color .12s;
+  }
+  .sv-cell:hover { background: color-mix(in srgb, var(--gridline) 45%, transparent); }
+  .sv-cell.other { opacity: .35; min-height: 22px; cursor: default; }
+  .sv-cell.other:hover { background: transparent; }
+  .sv-cell .d { font-size: 12px; font-weight: 600; color: var(--text-secondary); line-height: 1.1; }
+  .sv-cell.today { background: color-mix(in srgb, var(--series-1) 10%, transparent); }
+  .sv-cell.today .d { color: var(--series-1); }
+  .sv-cell.sel { border-color: var(--series-1); }
+  .sv-cell.sel .d { color: var(--series-1); }
+  .sv-cell .dots { display: flex; flex-wrap: wrap; gap: 3px; padding-left: 1px; }
+  .sv-cell .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .sv-cell .more { font-size: 10px; color: var(--muted); }
+  .sv-cal-tip { font-size: 11px; color: var(--muted); margin-top: 8px; }
+
+  /* ===== 线性时间线（日程规划 · 从早到晚一条线） ===== */
+  #sbSchedTimeline { display: flex; flex-direction: column; }
+  .tl-day {
+    position: relative;
+    padding: 2px 0 6px 20px;
+  }
+  /* 竖向轨道线 */
+  .tl-day::before {
+    content: ""; position: absolute; left: 7px; top: 8px; bottom: -2px;
+    width: 2px; background: color-mix(in srgb, var(--gridline) 90%, transparent);
+  }
+  .tl-day:last-child::before { bottom: auto; height: 24px; }
+  /* 日期节点圆点 */
+  .tl-day::after {
+    content: ""; position: absolute; left: 1px; top: 5px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--series-1); border: 3px solid var(--surface-1);
+    box-sizing: border-box;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--series-1) 45%, transparent);
+  }
+  .tl-day.is-past::after {
+    background: var(--muted);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--muted) 45%, transparent);
+  }
+  .tl-day-head {
+    display: flex; align-items: baseline; gap: 8px;
+    margin-bottom: 7px; min-height: 14px;
+  }
+  .tl-date {
+    font-size: 14.5px; font-weight: 700; color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+  .tl-day.is-past .tl-date { color: var(--text-secondary); }
+  .tl-wd { font-size: 11.5px; color: var(--text-secondary); }
+  .tl-rel {
+    font-size: 11px; font-weight: 600; white-space: nowrap;
+    color: var(--series-1); padding: 1px 9px; border-radius: 99px;
+    background: color-mix(in srgb, var(--series-1) 10%, transparent);
+  }
+  .tl-rel.is-today { color: #fff; background: var(--series-1); }
+  .tl-cnt { margin-left: auto; font-size: 11px; color: var(--muted); }
+  .tl-evts { display: flex; flex-direction: column; gap: 6px; }
+  .tl-day.is-past .tl-evts .sv-evt { opacity: .6; }
+  /* 「今天」分隔标记 */
+  .tl-today-mark {
+    position: relative;
+    display: flex; align-items: center; gap: 10px;
+    padding: 2px 0 10px 20px; margin: 2px 0;
+    color: var(--status-warning); font-size: 12px; font-weight: 700;
+  }
+  .tl-today-mark::before {
+    content: ""; position: absolute; left: 7px; top: 2px; bottom: 0;
+    width: 2px; background: color-mix(in srgb, var(--status-warning) 60%, transparent);
+  }
+  .tl-today-mark::after {
+    content: ""; position: absolute; left: 1px; top: 50%; margin-top: -7px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--status-warning); border: 3px solid var(--surface-1);
+    box-sizing: border-box;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--status-warning) 55%, transparent);
+  }
+  .tl-today-mark .t-line {
+    flex: 1; height: 1px;
+    background: color-mix(in srgb, var(--status-warning) 45%, transparent);
+  }
+
+  /* 「今天」之前的记录：默认折叠，可手动展开 */
+  .tl-past-head {
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    padding: 8px 12px; border-radius: 10px; margin: 2px 0 8px;
+    background: color-mix(in srgb, var(--gridline) 35%, transparent);
+    color: var(--text-secondary); font-size: 12.5px; font-weight: 600;
+    user-select: none; transition: background .12s;
+  }
+  .tl-past-head:hover { background: color-mix(in srgb, var(--gridline) 55%, transparent); color: var(--text-primary); }
+  .tl-past-head .arrow { transition: transform .15s; font-size: 11px; }
+  .tl-past.open .tl-past-head .arrow { transform: rotate(90deg); }
+  .tl-past-head .hint { margin-left: auto; font-weight: 400; font-size: 11px; color: var(--muted); }
+  .tl-past-body { display: none; }
+  .tl-past.open .tl-past-body { display: block; }
+
+  /* 添加表单（横排） */
+  .sv-add {
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .sv-add input, .sv-add select {
+    font-family: inherit; font-size: 12.5px; padding: 7px 10px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface-1); color: var(--text-primary); outline: none;
+  }
+  .sv-add input:focus, .sv-add select:focus { border-color: var(--series-1); }
+  .sv-add input#schedCompany { flex: 1.2; min-width: 130px; }
+  .sv-add input#schedNote { flex: 1.6; min-width: 130px; }
+  .sv-add button {
+    font-family: inherit; font-size: 12.5px; font-weight: 600;
+    padding: 8px 20px; border: none; border-radius: 8px;
+    background: var(--series-1); color: #fff; cursor: pointer;
+  }
+  .sv-add button:hover { filter: brightness(1.06); }
+
+  /* 事件卡片 */
+  .sv-evt {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 11px; border-radius: 10px;
+    background: color-mix(in srgb, var(--gridline) 40%, transparent);
+    border-left: 3px solid var(--evt-c, var(--series-1));
+  }
+  .sv-evt.done { opacity: .55; }
+  .sv-evt.done .e-co { text-decoration: line-through; }
+  .sv-evt .e-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .sv-evt .e-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .sv-evt .e-co {
+    font-size: 13px; font-weight: 600; color: var(--text-primary);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .sv-evt .e-type {
+    flex: none; font-size: 10.5px; font-weight: 600; color: #fff;
+    padding: 1px 8px; border-radius: 99px;
+    background: var(--evt-c, var(--series-1));
+  }
+  .sv-evt .e-note {
+    font-size: 11px; color: var(--text-secondary);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .sv-evt .e-side { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+  .sv-evt .e-time { font-size: 11px; color: var(--muted); }
+  .sv-evt .e-rel {
+    font-size: 10.5px; font-weight: 600; color: var(--series-1);
+    padding: 1px 8px; border-radius: 99px;
+    background: color-mix(in srgb, var(--series-1) 10%, transparent);
+  }
+  .sv-evt .e-btn {
+    flex: none; border: none; background: transparent; cursor: pointer;
+    color: var(--muted); font-size: 13px; padding: 3px 5px; border-radius: 6px;
+  }
+  .sv-evt .e-btn:hover { color: var(--text-primary); background: color-mix(in srgb, var(--gridline) 70%, transparent); }
+  .sv-evt .e-btn.tgl:hover { color: var(--status-good); }
+  .sv-evt .e-btn.del:hover { color: #e5484d; }
+  .sv-empty { font-size: 12.5px; color: var(--muted); padding: 12px 0; text-align: center; }
+
+  /* 月度分布 */
+  .sv-dist-body { display: flex; flex-direction: column; gap: 7px; }
+  .sv-dist-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .sv-dist-row .n { min-width: 52px; color: var(--text-secondary); }
+  .sv-dist-row .b {
+    flex: 1; height: 10px; border-radius: 5px; overflow: hidden;
+    background: color-mix(in srgb, var(--gridline) 60%, transparent);
+  }
+  .sv-dist-row .b i { display: block; height: 100%; border-radius: 5px; transition: width .3s ease; }
+  .sv-dist-row .c { min-width: 18px; text-align: right; font-weight: 700; color: var(--text-primary); }
+  .sv-dist-row .p { min-width: 34px; text-align: right; color: var(--muted); font-size: 11px; }
+  .sv-dist-total { font-size: 11.5px; color: var(--text-secondary); margin-top: 8px; }
+
+  /* 投递节奏 */
+  .sv-rhythm-bars { display: flex; align-items: flex-end; gap: 5px; height: 56px; }
+  .sv-rhythm-bars .rb {
+    flex: 1; min-height: 3px; border-radius: 4px 4px 0 0;
+    background: color-mix(in srgb, var(--series-1) 65%, transparent);
+  }
+  .sv-rhythm-bars .rb.zero { background: var(--gridline); }
+  .sv-rhythm-days { display: flex; gap: 5px; margin-top: 4px; }
+  .sv-rhythm-days span { flex: 1; text-align: center; font-size: 10px; color: var(--muted); }
+
+  /* ===== 吸顶快捷导航 ===== */
+  .nav-bar {
+    position: fixed;
+    top: 0;
+    left: 230px;
+    right: 0;
+    z-index: 150;
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 12px;
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--base-border, var(--border));
+    box-shadow: 0 1px 8px rgba(37,99,235,0.10);
+    transition: left 0.22s ease;
+  }
+  body.sb-collapsed .nav-bar { left: 56px; }
+  .nav-bar .nav-btn {
+    font-family: inherit;
+    font-size: 13px;
+    padding: 7px 18px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .nav-bar .nav-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+  }
+  .nav-bar .nav-btn.is-active {
+    background: linear-gradient(135deg, var(--series-1), #3b82f6);
+    border-color: transparent;
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+  }
+
+  /* 返回顶部按钮 */
+  .back-top {
+    position: fixed;
+    right: 20px;
+    bottom: 24px;
+    z-index: 140;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface-1);
+    color: var(--text-primary);
+    font-size: 18px;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(37,99,235,0.20);
+    opacity: 0;
+    transform: translateY(12px);
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+  }
+  .back-top.show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .back-top:hover { opacity: 0.85; }
+
+  /* 云端同步状态徽标 */
+  #cloudBadge {
+    position: fixed; right: 20px; bottom: 82px; z-index: 139;
+    font-size: 11px; font-weight: 600; padding: 4px 11px;
+    border-radius: 99px; white-space: nowrap; cursor: default;
+    background: var(--surface-1); border: 1px solid var(--border);
+    color: var(--text-secondary); box-shadow: 0 2px 10px rgba(37,99,235,.12);
+  }
+
+  @media (max-width: 640px) {
+    .nav-bar .nav-btn { padding: 6px 14px; font-size: 12px; }
+    .back-top { width: 42px; height: 42px; right: 14px; bottom: 18px; }
+    /* 移动端：侧边栏固定为图标栏，避免挤占内容 */
+    .sidebar { width: 56px; }
+    .sidebar .sb-title, .sidebar .sb-name, .sidebar .sb-count { display: none; }
+    .sidebar .sb-toggle { display: none; }
+    .sidebar .sb-track { justify-content: center; padding: 10px 0; }
+    .sidebar .sb-head { justify-content: center; }
+    body, body.sb-collapsed { padding-left: 56px; }
+    .nav-bar, body.sb-collapsed .nav-bar { left: 56px; }
+  }
+
+
+  /* ===== 日程规划：标题旁的赛道下拉框（原静态徽标改为可切换） ===== */
+  .sv-track-wrap { display: inline-flex; align-self: center; }
+  .sv-track-select {
+    -webkit-appearance: none;
+    appearance: none;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--series-1);
+    background-color: color-mix(in srgb, var(--series-1) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--series-1) 32%, transparent);
+    border-radius: 999px;
+    padding: 5px 30px 5px 12px;
+    cursor: pointer;
+    outline: none;
+    background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%232563eb' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 10px 6px;
+    transition: border-color .12s, box-shadow .12s;
+  }
+  .sv-track-select:hover { border-color: color-mix(in srgb, var(--series-1) 55%, transparent); }
+  .sv-track-select:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--series-1) 22%, transparent); }
+
+  /* ===== 侧边栏：主题切换（原悬浮按钮改入导航列表） ===== */
+  .sidebar .sb-sep-auto { margin-top: auto; }
+  .sidebar .sb-theme {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 13.5px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.12s;
+  }
+  .sidebar .sb-theme:hover {
+    border-color: color-mix(in srgb, var(--series-1) 40%, transparent);
+    color: var(--series-1);
+  }
+  .sidebar .sb-theme .sb-icon { font-size: 16px; line-height: 1; }
+  .sidebar .sb-theme .sb-name { flex: 1; }
+
+  /* ==== OfferBeacon 暗色模式补全（v1.3.0）====
+     根因：暗色令牌只作用于 .tracker-root 内部，body/html 及直接挂在 body 上的
+     元素（云端同步徽标等）仍用亮色令牌，导致半透明条带全部叠在白色页面底上。
+     方案：暗色下页面底色用更深的墨蓝 #070d1a，与卡片面板 #0d1524 形成明暗层次，
+     既能看清功能模块边界，又不会混成一片。 */
+  :root[data-theme="dark"] { color-scheme: dark; }
+  :root[data-theme="dark"] body {
+    background:
+      radial-gradient(1200px 500px at 20% -10%, rgba(37,99,235,0.16), transparent 60%),
+      radial-gradient(1000px 460px at 90% 0%, rgba(110,168,247,0.10), transparent 55%),
+      #070d1a;
+    color: #eaf2ff;
+  }
+  :root[data-theme="dark"] #cloudBadge {
+    background: #0d1524;
+    border-color: rgba(180,200,240,0.14);
+    color: #a7b4cf;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+  }
+  /* 未手动切主题时跟随系统暗色 */
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) { color-scheme: dark; }
+    :root:where(:not([data-theme="light"])) body {
+      background:
+        radial-gradient(1200px 500px at 20% -10%, rgba(37,99,235,0.16), transparent 60%),
+        radial-gradient(1000px 460px at 90% 0%, rgba(110,168,247,0.10), transparent 55%),
+        #070d1a;
+      color: #eaf2ff;
+    }
+    :root:where(:not([data-theme="light"])) #cloudBadge {
+      background: #0d1524;
+      border-color: rgba(180,200,240,0.14);
+      color: #a7b4cf;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+    }
+  }
+
+  /* ==== OfferBeacon 原生控件弹层替换（v1.4.0）====
+     Android WebView 的下拉选项列表 / 日期弹窗是系统级弹层，页面 CSS 无法着色，
+     暗色模式下会突兀地弹出一个白色弹窗。
+     方案：拦截点击后用页面内自绘弹层替代（下拉列表 / 日历+时间选择），
+     弹层挂在 .tracker-root 内、全部走主题变量，暗色自动适配。 */
+  .ux-pop {
+    position: fixed;
+    z-index: 1000;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.28);
+    padding: 4px;
+    max-height: 320px;
+    overflow-y: auto;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 13px;
+    animation: uxIn 0.12s ease-out;
+  }
+  @keyframes uxIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+  .ux-opt { padding: 9px 12px; border-radius: 7px; cursor: pointer; white-space: nowrap; }
+  .ux-opt:hover { background: color-mix(in srgb, var(--series-1) 12%, transparent); }
+  .ux-opt.is-sel { background: color-mix(in srgb, var(--series-1) 16%, transparent); color: var(--series-1); font-weight: 600; }
+
+  .ux-cal { padding: 10px; max-height: none; overflow: visible; width: 284px; }
+  .ux-cal-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .ux-cal-head .ux-nav { width: 28px; height: 28px; border: 1px solid var(--border); border-radius: 8px;
+    background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 14px; line-height: 1; }
+  .ux-cal-head .ux-nav:hover { border-color: var(--series-1); color: var(--series-1); }
+  .ux-cal-head .ux-mtitle { flex: 1; text-align: center; font-weight: 600; font-size: 13.5px; color: var(--text-primary); }
+  .ux-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .ux-cal-wd { text-align: center; font-size: 11px; color: var(--muted); padding: 3px 0; }
+  .ux-cal-day { text-align: center; padding: 6px 0; border-radius: 8px; cursor: pointer; font-size: 12.5px; color: var(--text-primary); }
+  .ux-cal-day:hover { background: color-mix(in srgb, var(--series-1) 12%, transparent); }
+  .ux-cal-day.is-out { color: var(--muted); opacity: 0.5; }
+  .ux-cal-day.is-today { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--series-1) 55%, transparent); }
+  .ux-cal-day.is-sel { background: var(--series-1); color: #fff; font-weight: 600; }
+  .ux-cal-time { display: flex; gap: 8px; margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px; }
+  .ux-time-col { flex: 1; }
+  .ux-time-col .ux-tlabel { font-size: 11px; color: var(--muted); margin-bottom: 4px; text-align: center; }
+  .ux-time-list { max-height: 118px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px;
+    scrollbar-width: none; }
+  .ux-time-list::-webkit-scrollbar { display: none; }
+  .ux-time-item { text-align: center; padding: 5px 0; cursor: pointer; font-size: 12.5px; color: var(--text-secondary); }
+  .ux-time-item:hover { background: color-mix(in srgb, var(--series-1) 12%, transparent); }
+  .ux-time-item.is-sel { background: var(--series-1); color: #fff; font-weight: 600; }
+  .ux-cal-foot { display: flex; gap: 8px; margin-top: 10px; }
+  .ux-cal-foot button { flex: 1; font-family: inherit; font-size: 12.5px; padding: 7px 0; border-radius: 8px;
+    border: 1px solid var(--border); background: transparent; color: var(--text-secondary); cursor: pointer; }
+  .ux-cal-foot button:hover { border-color: var(--series-1); color: var(--series-1); }
+  .ux-cal-foot .ux-primary { background: var(--series-1); border-color: transparent; color: #fff; font-weight: 600; }
+
+  /* ==== OfferBeacon 移动端适配（6.1–6.8 英寸旗舰手机） ==== */
+  @media (max-width: 640px) {
+    /* 顶部导航改为文档流内吸顶（sticky）：占据自身高度，永不遮挡「快速新增」等内容 */
+    .nav-bar, body.sb-collapsed .nav-bar {
+      position: sticky;
+      top: 0;
+      left: auto;
+      justify-content: flex-start;
+      gap: 6px;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .nav-bar::-webkit-scrollbar { display: none; }
+    .nav-bar .nav-btn { flex: 0 0 auto; padding: 7px 13px; font-size: 12.5px; }
+
+    /* 内容区顶部留白收紧（导航已在文档流内，无需额外让位） */
+    .tracker-root {
+      padding: 12px 12px 72px !important;
+    }
+    .tracker-header { margin-bottom: 12px; }
+    .tracker-header h1 { font-size: 20px; }
+    .track-chip { transform: none; font-size: 12px; padding: 3px 10px; }
+
+    /* 表单控件加大触控面积，输入字号 ≥16px 防止自动缩放 */
+    .quick-add, .add-form { gap: 8px; margin-bottom: 14px; }
+    .quick-add .qa-label { font-size: 12.5px; }
+    .quick-add input, .quick-add select,
+    .add-form input, .add-form select { font-size: 16px; padding: 9px 12px; }
+    .btn-add { padding: 9px 16px; font-size: 14px; }
+
+    /* 日程规划头部：标题 + 赛道下拉框 + 回到今天，窄屏自动换行不重叠 */
+    .sv-head { gap: 8px; align-items: center; }
+    .sv-title { font-size: 18px; gap: 8px; }
+    .sv-nav { margin-left: auto; }
+    .sv-track-select { font-size: 13px; padding: 4px 26px 4px 10px; background-position: right 8px center; }
+
+    /* 侧边栏图标栏：主题切换按钮居中 */
+    .sidebar .sb-theme { justify-content: center; padding: 10px 0; }
+  }
+  /* 小屏（6.1 英寸左右，≤390px）进一步收紧 */
+  @media (max-width: 390px) {
+    .nav-bar .nav-btn { padding: 7px 10px; font-size: 12px; }
+    .tracker-header h1 { font-size: 18px; }
+    .tracker-root { padding-left: 10px; padding-right: 10px; }
+  }
+  /* 6.4–6.8 英寸大屏手机（约 412–480px CSS 宽）：留白更舒展 */
+  @media (min-width: 400px) and (max-width: 640px) {
+    .tracker-root { padding-left: 16px; padding-right: 16px; }
+    .tracker-header h1 { font-size: 21px; }
+  }
+
+</style>
+</head>
+<body data-page-node-id="8ebV6epmdbl7wTTW3y35op">
+<div data-page-node-id="oR3ug7AZnnOsWCh0e4Zyof" class="tracker-root" id="app">
+
+  <!--pnid:G2gsrOyj7YJR37pMigj82T--><!-- 可折叠侧边栏：各大企业 / 央国企 赛道切换（fixed 定位，放在 tracker-root 内以继承主题变量） -->
+  <aside data-page-node-id="0ngMfVFf6Kzg9lfGT91htV" aria-label="投递赛道切换" class="sidebar" id="sidebar">
+    <div data-page-node-id="skE81pMcIIFMUVzfF7VVEw" class="sb-head">
+      <span data-page-node-id="GApoaNpYION33k8Uqq8Rp9" class="sb-logo"><!--pnid:EGusqDkk9LnLEPY6C7uxai-->🎯</span>
+      <span data-page-node-id="cX3qqz6VXu5gSitfiF3P0P" class="sb-title"><!--pnid:WeBCZeXO1HRwreXLqvtTsv-->投递赛道</span>
+      <button data-page-node-id="18hZc3zXT1Rtt0C7OtC6hm" class="sb-toggle" id="sbToggle" title="折叠/展开侧边栏"><!--pnid:ocmOZGWqp416KSMUXPMIoR-->«</button>
+    </div>
+    <button data-page-node-id="qqKlJQnEj6dSGXZPnRsCL7" class="sb-track is-active" data-track="company" title="各大企业">
+      <span data-page-node-id="qsKr1OHsiDk4GNWqnaRClw" class="sb-icon"><!--pnid:mQCfuWhVdtGllPrMYWhrON-->🏢</span><span data-page-node-id="TlYK24n023WZv4gO89DFcb" class="sb-name"><!--pnid:DYRkzFISDazxcnr3lN7NQo-->各大企业</span>
+      <span data-page-node-id="1wdBsLrWe5NTx18SVapW1b" class="sb-count" id="sbCountCompany"><!--pnid:0afLkTtrdfKIvh8Mew7esq-->0</span>
+    </button>
+    <button data-page-node-id="y8AbucHnUuvoXCglINcEZG" class="sb-track" data-track="soe" title="央国企">
+      <span data-page-node-id="dyL7uXssc3u6m2TjkWt3bO" class="sb-icon"><!--pnid:ad8xEK5J4zN2OWuOAKNjmY-->🏛</span><span data-page-node-id="5IJUjfvuk8c7xikuYIxfq9" class="sb-name"><!--pnid:MWHic3xTpM6XFhhYRAV9Ai-->央国企</span>
+      <span data-page-node-id="sbeyn5sSIlvMWii9kKP6M4" class="sb-count" id="sbCountSoe"><!--pnid:qX9xpBTwWwROrCW6YEnzbC-->0</span>
+    </button>
+
+    <div data-page-node-id="STc0Jikw25fMVD6NE9GPs8" class="sb-sep"></div>
+    <button data-page-node-id="81DjBlsJ0oC2vTxHKvBdfA" class="sb-track" data-view="schedule" title="日程规划 · 点击打开">
+      <span data-page-node-id="pU1YzFQMxF2JCEHjzDXtXO" class="sb-icon"><!--pnid:bM02SaRidx3DE1rpNUvyC3-->📅</span><span data-page-node-id="fQ3Jv86rB5ynrQcg6hNKyn" class="sb-name"><!--pnid:a67UAps4bjhqJh0eLiPW17-->日程规划</span>
+    </button>
+  </aside>
+
+
+  <!--pnid:EbFZVVRpCs8dLtapeA22rW--><!-- 吸顶快捷导航 -->
+  <nav data-page-node-id="a5TMBUE2fwBXWBJJzZDGT4" aria-label="页面快捷导航" class="nav-bar" id="navBar">
+    <button data-page-node-id="Q4aMqMgSK6Bc32UNKgM93B" class="nav-btn" data-target="records"><!--pnid:yvd12sJ6nWk1fXjbY9cBjS-->📋 投递记录</button>
+    <button data-page-node-id="4caFCZnUR9iWdW9jQRm0EZ" class="nav-btn" data-target="overview"><!--pnid:q1hs7PH6jpkVyIo98Bbckp-->📊 总览</button>
+    <button data-page-node-id="Tx9UOklqQKiJDrjkHerhnj" class="nav-btn" data-target="sieveSection"><!--pnid:dK6Aze2TUGVIe6KsbosYGV-->🕸 秋招筛子</button>
+    <button data-page-node-id="NN7cQiGoVsu8Yab8VD4yX4" class="nav-btn" data-target="watchlistSection"><!--pnid:rKhK1l8VpbMq1ouoBSjfdU-->⏳ 关注清单</button>
+  </nav>
+
+  <!--pnid:LEwsxWSxsj0ptrpOFlkM6p--><!-- 快速新增投递 -->
+  <div data-page-node-id="ylHspToVAf8hB3B8aEqzQz" id="mainTrackView">
+  <div data-page-node-id="1CQmz2fekPQLLa8wmAzpDF" class="quick-add">
+    <span data-page-node-id="mEeIqXQK3JeoxgK3CyBNrY" class="qa-label"><!--pnid:X4HsMMINrtjFDIjhMNjF8o-->快速新增</span>
+    <input data-page-node-id="kicfL0Y4YoLBCq2PAi3hxX" id="qaCompany" placeholder="企业名称 *" type="text">
+    <input data-page-node-id="EEhQvTxxgtmFsEXnEysCdY" id="qaPosition" placeholder="岗位（如：前端开发）" type="text">
+    <select data-page-node-id="p19nLQcstzaLUsOECyWJn9" id="qaStatus">
+      <option data-page-node-id="R558ggMHAqcRmpaRHLdmnv" value="已投简历"><!--pnid:FXtjXyLPlQdieJgiTUWXBX-->已投简历</option>
+      <option data-page-node-id="rAJTnicaY2PHVVChdLFpoD" value="已过初筛"><!--pnid:pRkjof0LxJ1Lgal7MfK6h8-->已过初筛</option>
+      <option data-page-node-id="JUqRmRD9WnPizVaphU7wiN" value="hr筛选"><!--pnid:jhSayMtJFKrx4NYbCJdN78-->hr筛选</option>
+      <option data-page-node-id="oAQm0E2lQlPd4zlotWwU9b" value="业务筛选"><!--pnid:olUKwRzEEYWNqTy1xcKvgj-->业务筛选</option>
+      <option data-page-node-id="lblbe8egWNTYsrIBQ6kWW4" value="待AI面试"><!--pnid:u4TWIsAuBZAxb06GlZRsUy-->待AI面试</option>
+      <option data-page-node-id="lexHFEi4nBAEjNuA2kWTtL" value="待线上测评"><!--pnid:zIlyRnVueodhnDYKYE5zmR-->待线上测评</option>
+      <option data-page-node-id="vqxjtOGUtWo4QHnenZfcHk" value="面试"><!--pnid:AEbQ61ymHHztFCykSE3HUd-->面试</option>
+      <option data-page-node-id="xNgxQi3Mc46q9OpMUHSpPd" value="评估中"><!--pnid:0eGTpEiJpy2weDvFhoQmBa-->评估中</option>
+      <option data-page-node-id="Mg5S5nLUkYLKrxPc31hvbv" value="等offer"><!--pnid:FOERfcZss9ZjBsXVCdqhmU-->等offer</option>
+      <option data-page-node-id="AHyNtJcb0aR47wDElf2WSZ" value="挂"><!--pnid:IU9lKSu9u2ES9Q0fuYKxNn-->挂</option>
+    </select>
+    <button data-page-node-id="VYkfWWamdlhDRv8vo3FJjr" class="btn-add" id="qaAddBtn"><!--pnid:IGmpkpKV8IRID01ZMhBYZx-->＋ 添加</button>
+  </div>
+
+  <!--pnid:n6Weai7r9UsMBbEvIpyX6r--><!-- Header -->
+  <div data-page-node-id="776NjC2xln0EopyKNcH5Vi" class="tracker-header">
+    <div data-page-node-id="NnGvkV11iYnQ7RqCvKada4" class="title-row">
+      <h1 data-page-node-id="Td57n71G6ZG36u5t1sWIFL"><!--pnid:R7RgG1SKBp2MpFqEOiAILS-->📋 投递记录</h1>
+      <span data-page-node-id="oIB4rlmY1wmQYLSNxJlYH9" class="track-chip" id="trackChip"><!--pnid:Tr4n2iNkek1b2JAMSQFjeZ-->🏢 各大企业</span>
+      
+    </div>
+  </div>
+
+  <!--pnid:AioxYXEBeoymwjk1QdDZrb--><!-- 投递记录（置于最前） -->
+  <div data-page-node-id="4w9DtZrIjMOLZy9bXVYgPs" class="add-form">
+    <button data-page-node-id="sMMOWsfhrzIbZZKReek2gO" class="btn-add" id="openAddBtn"><!--pnid:vRu1VEvvM5GLNM2SROPHf1-->+ 新增投递</button>
+  </div>
+
+  <div data-page-node-id="cYBUhbKX2UUF7YVG9Tzzay" class="filter-bar" id="records">
+    <label data-page-node-id="SFVfzZ0bMwg9bmQRyr4ZGb"><!--pnid:6DQjyB2PWAJHyDjK6VyMaR-->
+      搜索
+      <input data-page-node-id="DLN70vQiUWuHykW2FCCndM" id="filterSearch" placeholder="企业名 / 岗位 / base" type="text">
+    </label>
+    <label data-page-node-id="o1XtIvBKQMqn8pl3S2SNvD"><!--pnid:xUTIGN9QyJUyUBOGKxfwpQ-->
+      状态
+        <select data-page-node-id="BhCcoUolNo0aloSiRCjJwb" id="filterStatus">
+          <option data-page-node-id="T0dMZ11gDpYjQyj2MYEsWu" value><!--pnid:N0MXhS4fTynQu38wmm9bia-->全部</option>
+          <option data-page-node-id="cRROLCTS8SrVhu4YMWrMM2" value="已投简历"><!--pnid:8xHBQavcobNsN1IPnj4BFG-->已投简历</option>
+          <option data-page-node-id="vqT9SbL1sr1nI4s6aTAMkk" value="已过初筛"><!--pnid:ZRJYTziAYQGRSvFsjn7dfc-->已过初筛</option>
+          <option data-page-node-id="WZD4axro89y5OxLL9lMVXr" value="hr筛选"><!--pnid:bLQc41SVOZnx6Ujzra0YUk-->hr筛选</option>
+          <option data-page-node-id="8beEjt6wIsHe7xlQSMvA0N" value="业务筛选"><!--pnid:F90GMSLzkYDeTcAiyBnSZM-->业务筛选</option>
+          <option data-page-node-id="5gI1Do0LLVZU1939DaZXRQ" value="待AI面试"><!--pnid:axVgi51hvHhgPY6dAwyQyi-->待AI面试</option>
+          <option data-page-node-id="sI1I1SxzTWAlk2cboYNQkc" value="待线上测评"><!--pnid:BmKmVCCCYu3oTW9wtgVSi8-->待线上测评</option>
+          <option data-page-node-id="uR7PHf07qeA8TzdPFxq0Fu" value="面试"><!--pnid:Ijapo4SnCv9nrtqoeN9KJJ-->面试</option>
+          <option data-page-node-id="5TKDeE2s6Ri36wHzqK2hP4" value="评估中"><!--pnid:bEK5ihKwo4RGki5URhA6Ca-->评估中</option>
+          <option data-page-node-id="QFj7BR3CXz9tfMZQI8oNcM" value="等offer"><!--pnid:G1dEOabfgUvWLEBGrgD9Pt-->等offer</option>
+          <option data-page-node-id="i5B666TsNf8BA9L1lI1yI5" value="挂"><!--pnid:1pPnOwxDWg4FpsG2OQLf0c-->挂</option>
+        </select>
+    </label>
+    <label data-page-node-id="M7bIEF1FLukF3OClGDSpDx"><!--pnid:DBkJNb5pWBgr5NyblBDMot-->
+      排序
+      <select data-page-node-id="sAg0FD1AebtbwKxG2qhiu2" id="filterSort">
+        <option data-page-node-id="c7A0vcse5u6uOIAP76uk1p" value="date-desc"><!--pnid:FjsjgjEnqOjvuQqItv76lR-->投递日期 · 最新在前</option>
+        <option data-page-node-id="dukNG5i8QNXbWeF3PwnZxB" value="date-asc"><!--pnid:OcJbgCVh8lnMPHnV5PsXsT-->投递日期 · 最早在前</option>
+        <option data-page-node-id="mxsvfwGnyn9oq5wYtw3fYh" value="company-asc"><!--pnid:ZHRrYW0wvi2SZ2YddH4sWE-->企业名 A→Z</option>
+        <option data-page-node-id="AwQyU2qvnzq71i8unNuRFu" value="company-desc"><!--pnid:AeTP0AHFQ54wmVuWNgB4Ug-->企业名 Z→A</option>
+        <option data-page-node-id="a4mdbYL9BmUMoTGOabPLjC" value="status-asc"><!--pnid:tHoVjxroNmxXXVPyeQrPzE-->状态</option>
+      </select>
+    </label>
+    <div data-page-node-id="kYMfxmraU5y1VEizFbyhN2" class="view-toggle" title="切换投递记录视图">
+      <button data-page-node-id="HNYbuMqc6OWmSnvw18uIGl" class="vt-btn" id="viewDetailBtn" type="button"><!--pnid:oRYbIRV6VPZoX0qjIpNghq-->☰ 详细</button>
+      <button data-page-node-id="8JWJ0E1tZf7Y2e1BoTLJVK" class="vt-btn" id="viewCompactBtn" type="button"><!--pnid:0vT71mAnkfRomduoJpoUfx-->▦ 紧凑</button>
+    </div>
+    <button data-page-node-id="rD0G2yXxAiMyRlJKH6EX7l" class="btn-reset" id="resetFiltersBtn"><!--pnid:TqkwHHho4kTcPdABbdczxc-->↺ 重置</button>
+  </div>
+
+  <!--pnid:KVKwLFtrdj0KAvpPq0WWFb--><!-- 投递记录卡片：每行两个 -->
+  <div data-page-node-id="iQn6G9JqsEmxUBWGzQptn2" class="rec-grid" data-sp-bindable="database" data-sp-database-id="Qfresea6xyivpkxK5KbpAt" id="tableBody"></div>
+  <div data-page-node-id="FnZw8MYkPaLtHW7q27SgUP" class="empty-state" id="emptyState" style="display:none">
+    <p data-page-node-id="bdeQ6Zyvf1SHfQ3mJxZNj7"><!--pnid:Hn6cox3Q4A6l0lIhUslOa0-->暂无匹配的记录</p>
+  </div>
+
+  <!--pnid:DNxJ1hg1Hjciw1Qa3Gtc9B--><!-- Status key legend -->
+  <div data-page-node-id="3kt33fvI5VSV2bTJ0RACbQ" class="status-key" id="statusKey"></div>
+
+  <!--pnid:3Ja9dPG32xMCvNT3eZ0iXW--><!-- 总览（精简）：统计 -->
+  <div data-page-node-id="VZsn7mwA4z6HooPXA6nThQ" class="overview-card" id="overview">
+    <div data-page-node-id="mlVmr4U0T7PD9ZA7NBJaO8" class="stats-row" id="statsRow"></div>
+  </div>
+
+  <!--pnid:Nl5XT0PDE5ulGtrVSrnj0k--><!-- Watchlist (待启动关注清单) -->
+  <div data-page-node-id="rCEfGyZF1cRaBH3cgapuh4" class="watchlist-section" id="watchlistSection">
+    <div data-page-node-id="ssSrBXvydbEAQx0dbSTHge" class="watchlist-header">
+      <h2 data-page-node-id="fflRlrnopDRhZJsQn3qew3" id="watchlistToggleBtn" title="点击展开/折叠" style="cursor:pointer; user-select:none">
+        <span data-page-node-id="DfUy0FkltjJuCrbWiPTcxw" id="watchlistCaret"><!--pnid:4TO1MUL8FVSsxU2lkfDRdl-->▾</span><!--pnid:JbweVeDqU3Jgpp0Zq9HGCU--> ⏳ 关注清单 · 秋招未开启
+      </h2>
+      <button data-page-node-id="LnZHhyROjmgbOeutcCknou" class="btn-add" id="openWatchAddBtn" style="font-size:12px; padding:6px 14px"><!--pnid:NyCkPRHtoWFiET3FHE9YK5-->＋ 添加关注</button>
+    </div>
+    <div data-page-node-id="8ZLpiA0YRYAvOy06pl6izQ" class="watchlist-body">
+      <div data-page-node-id="WmKLiRaPrDo4cwnOPPNFXc" class="watch-grid" data-sp-bindable="database" data-sp-database-id="ElMIw5SaP962Kds8a0tFPn" id="watchlistBody"></div>
+      <div data-page-node-id="nkoUD5LtzyFYmYwl3La823" class="empty-state" id="watchlistEmpty" style="display:none">
+        <p data-page-node-id="PomlXIweLaMW5Rl0YLNBHm"><!--pnid:C7eH7Lv7Dj0XfqJ5kblfLc-->暂无关注的企业 · 点击右上角「＋ 添加关注」</p>
+      </div>
+    </div>
+  </div>
+
+  <!--pnid:4Edv67KvDMggRe9XsBFLeG--><!-- 秋招筛子：已开放秋招、待逐个官网核实岗位的企业 -->
+  <div data-page-node-id="LNP4l3ePvdStp3tYyrsDOu" class="sieve-section" id="sieveSection">
+    <div data-page-node-id="W71tRumrFhRYIhofifdc1x" class="sieve-header">
+      <h2 data-page-node-id="TfPlAX4h7K0au36stLqxy2" id="sieveToggleBtn" title="点击展开/折叠" style="cursor:pointer; user-select:none">
+        <span data-page-node-id="xFurVH1DhU3bxsO6s5dKQn" id="sieveCaret"><!--pnid:v4UMbQ3EJbviojMnT4N2EF-->▾</span><!--pnid:6iXRsBfLakGvH4Jk2qxmIG--> 🕸 秋招筛子 · 已开放待筛选
+      </h2>
+      <div data-page-node-id="std4806zYYuXiM2RMkTvJT" class="sieve-tools">
+        <input data-page-node-id="9TSH93jFKllTELrwMarIQf" id="sieveSearch" placeholder="🔍 查找篓内企业…" title="按企业名过滤，绿色标签 = 已投过" type="text">
+        <span data-page-node-id="cTuzL0WF6W4RtD7yPCvRbi" class="sieve-count" id="sieveCount"></span>
+      </div>
+    </div>
+    <div data-page-node-id="FBR10LGp0Cdvvy5DoIU9eo" class="sieve-body">
+    <!--pnid:rBAHBveRh6XkSCiwiueoyI--><!-- 批量放入 -->
+    <div data-page-node-id="Oes6xKWMEEv3xEmHMkZYPr" class="sieve-batch">
+      <textarea data-page-node-id="BXJ184c5IlSD8xCp14h9ES" id="sieveBatchInput" placeholder="批量粘贴企业名单，支持一行多个，用顿号、逗号、分号或换行分隔（可带官网链接，如：米哈游 https://www.mihoyo.com）" rows="3"></textarea>
+      <div data-page-node-id="begdTUWQ29Kz5gEFlIA5ea" class="sieve-batch-row">
+        <input data-page-node-id="yRUx4nTqFtrSRXSDhcw6yG" id="sieveSingle" placeholder="单个企业名称（可选）" type="text">
+        <input data-page-node-id="l3fbyLW4qbstPaQJ3pXlQH" id="sieveSingleUrl" placeholder="官网链接（可选）" type="text">
+        <button data-page-node-id="aKp1VVomUprCbBW1c3F1P0" class="btn-add" id="sieveAddBtn"><!--pnid:gTvhphJM48UAFS3QPUydFR-->＋ 放入篓子</button>
+      </div>
+    </div>
+
+    <!--pnid:kvWzvo001w7gDehKTsQlj5--><!-- 筛选目标提示 / 清单（标签流，一行多个） -->
+    <div data-page-node-id="XAUq7qTJOVdkL0tYvGDnJP" class="sieve-chips" data-sp-bindable="database" data-sp-database-id="WTn57bpJTiuNvVkhcKhaNg" id="sieveBody"></div>
+    <div data-page-node-id="fAISgKprz5QQMK0nbGqyW4" class="empty-state" id="sieveEmpty" style="display:none">
+      <p data-page-node-id="xg2qzPW3WpvoaQoKCu24sT"><!--pnid:4BppkQxG4NAO1TMhSOXRXC-->篓子是空的 · 把已开放秋招的企业批量放进来，逐个核实岗位</p>
+    </div>
+    </div>
+  </div>
+</div><!--pnid:yMeEjlDMSfcBlGlbEkjxR3--><!-- /mainTrackView -->
+
+  <!--pnid:NCU1gYcsTx7mIgn0EakcdR--><!-- 日程规划（点击侧边栏「📅 日程规划」打开）：单列线性时间线 · 从早到晚 -->
+  <section data-page-node-id="MinvYNX8DHqcJ7ZVh7p3pl" class="sv-root" id="scheduleView">
+    <div data-page-node-id="R9UiKva01RbwUteXOo7MpQ" class="sv-head">
+      <div data-page-node-id="Ts9ryBgp6fzLdWYVHKnogS" class="sv-title"><!--pnid:mDbIPbyVmuucKPJK0sf1bS-->📅 日程规划 <span class="sv-track-wrap"><select data-page-node-id="WbF4ka49NUKyyH9fHiiklf" class="sv-track-select" id="schedTrackSelect" aria-label="切换投递赛道" title="切换投递赛道"></select></span></div>
+      <div data-page-node-id="r4CglNkq9aXMoXUjH1HUtJ" class="sv-nav">
+        <button data-page-node-id="PcsMBUYAZasHSmDeiNkt0D" class="sv-btn" id="sbCalToday" title="回到本月并定位到今天"><!--pnid:v4Erou6WSeWXkyk3hUhJgw-->回到今天</button>
+      </div>
+    </div>
+
+    <div data-page-node-id="K56XnyMZ3zXzYHWwTOnbbF" class="sv-layout">
+      <!--pnid:D7byERay1jNt2ISwb0AstE--><!-- 新增日程表单（通栏置顶） -->
+      <div data-page-node-id="dE2ICltBUNgcTpBmAK7l5e" class="sv-card wide">
+        <div data-page-node-id="4JQx5G3Jqk3wCpRH0Ouf12" class="sv-sec-title"><!--pnid:mnB6Ng8wl5zAOGzA3rPvta-->➕ 新增日程</div>
+        <div data-page-node-id="neQc2q3BhtsfU7pqBVnUP2" class="sv-add" id="sbSchedAdd">
+          <input data-page-node-id="jwBLj1TIpv4NkEqsqGeBVO" id="schedCompany" placeholder="企业名称 *" type="text">
+          <select data-page-node-id="ZEsRWBRgkpaAipkHLeG3pB" id="schedType">
+            <option data-page-node-id="KZYQmkvsUoWU81tARcLUYB" value="笔试"><!--pnid:JfHdz1JAAZbv8MT6EurX17-->笔试</option>
+            <option data-page-node-id="LqeoSvv9xPhrztDqDgPeak" value="AI面试"><!--pnid:PNU6xogIPRb3gXtFAxQPJ5-->AI面试</option>
+            <option data-page-node-id="PikJBHBWI6MO3C8tGLaD8E" value="线上测评"><!--pnid:3PiLmRoscM14apE7eXoe9k-->线上测评</option>
+            <option data-page-node-id="d0H7E8QZx8p1p1r0sRn2CX" value="一面"><!--pnid:OG9h471WqYJUemUck2OTuw-->一面</option>
+            <option data-page-node-id="mpn2XDi6fO36DHSD7pfxVh" value="二面"><!--pnid:kpWf2z0LI9D9K471qLMMEt-->二面</option>
+            <option data-page-node-id="fyRaKWPAFD1GSLHYvgkHmJ" value="三面"><!--pnid:gEavsIE5sXMJW7oxxAQUp0-->三面</option>
+            <option data-page-node-id="RI747aqd8WdRsBynjZ1b1c" value="终面"><!--pnid:xaPr8qdErXiOKf34mciLAU-->终面</option>
+            <option data-page-node-id="sUUExJeJVLeeXlSwb5NLPz" value="HR面"><!--pnid:67pGFgxUm2uGS0PAbQrVA8-->HR面</option>
+            <option data-page-node-id="etMOZr5JwPqrZs6rg0ZoLl" value="电话沟通"><!--pnid:Kk5gtr6xwO72YYhn2DFIjw-->电话沟通</option>
+            <option data-page-node-id="IqeSLdB5sAP4GiOAYoGndP" value="其他"><!--pnid:RRwhRo3gKR4LWCg9rcuDzp-->其他</option>
+          </select>
+          <input data-page-node-id="BQP534LmzvCOYWG3GUGHrq" id="schedTime" type="datetime-local">
+          <input data-page-node-id="tps5YUv1yantFFNym5ysjQ" id="schedNote" placeholder="备注（可选，如：面试链接、HR微信）" type="text">
+          <button data-page-node-id="NVGyUOv6r9Rg0satUnxEwa" id="schedAddBtn"><!--pnid:3GTjRQeTo3i5PWoqXVmd3f-->＋ 添加</button>
+        </div>
+      </div>
+
+      <!--pnid:Uar2805lgfPI1f26Hf858P--><!-- 左：线性时间线 · 全部日程按时间从早到晚，按日期分组 -->
+      <div data-page-node-id="joNiU5iC5HStfV1YYIPBUk" class="sv-card">
+        <div data-page-node-id="I8S5ptgyob5K1S7Xt9eg1T" class="sv-sec-title" id="sbSchedEventsTitle"></div>
+        <div data-page-node-id="5wSTnKej9gO3hLh2bOQWit" data-sp-bindable="database" data-sp-database-id="NNMBHnWBfgztcdYrkH6Zow" id="sbSchedTimeline"></div>
+      </div>
+
+      <!--pnid:TLj4XCEOCxVp5CmoE0DojO--><!-- 右：月份日历（点击日期筛选时间线）+ 月度分布 + 投递节奏 -->
+      <div data-page-node-id="CyroflfTBm61qFQswfPuKZ" class="sv-side">
+        <div data-page-node-id="euUj2MfRRnxjwIyQhy3AZu" class="sv-card">
+          <div data-page-node-id="qA1MtLWJyAgkNj9ThjIS5g" class="sv-cal-head">
+            <button data-page-node-id="GbW9xl6EQIgfZDjF4mLMWV" class="sv-btn" id="sbCalPrev" title="上个月"><!--pnid:HsTx0xrqyv15SGUFYicd4Q-->‹</button>
+            <span data-page-node-id="5fCQGz1MKpm3K9hNstGpLr" class="sv-month" id="sbCalMonth"></span>
+            <button data-page-node-id="kdKB3dS0eZX8jcIEnml7av" class="sv-btn" id="sbCalNext" title="下个月"><!--pnid:yQjfXASaGOBBXMAJQCTUoK-->›</button>
+          </div>
+          <div data-page-node-id="lGtIoNs9aw8czsoL0UpMaC" class="sv-cal-dows">
+            <span data-page-node-id="lPsWux7FNltpSArpZLwZpd"><!--pnid:32b411pTgxJc7PmioNkSfg-->日</span><span data-page-node-id="PiofTv1bsBZNOPKu5bTjQI"><!--pnid:AWkduNbcyeOrXmnj46iZMP-->一</span><span data-page-node-id="ZMNpv8CgorRG0F108S2ckp"><!--pnid:pDVsjDZHvISZBCxlytws82-->二</span><span data-page-node-id="GqeR47VwMcUPCODpqMp5RB"><!--pnid:6cJG9ILIA6L1fq7kGysUnm-->三</span><span data-page-node-id="DWj5QUgFqNM39yc1nZQnxq"><!--pnid:EAfoqegMz3SWhJmRgqD94A-->四</span><span data-page-node-id="9qaP37TlkFPgdpDzRZ81Rq"><!--pnid:TIx309dvKK5EEof0PnIX2w-->五</span><span data-page-node-id="5bqnBWhin6yqkG4KGXfRSl"><!--pnid:FvmCiuKOYf7dwdGp0U2YQ1-->六</span>
+          </div>
+          <div data-page-node-id="cTgYPcqt3utRQAginLhUX0" id="sbCalGrid"></div>
+          <div data-page-node-id="Uf34iBHuiTaDQA5LJQhhtm" class="sv-cal-tip"><!--pnid:jjLPxEeqb7DUOk4BluPwuJ-->点击日期 → 时间线只看当天；再点一次取消</div>
+        </div>
+
+        <div data-page-node-id="jcvvnZztaIbO2RaOxPGnuI" class="sv-card">
+          <div data-page-node-id="cmALHn4qawUtUpQ2cIYzMi" class="sv-sec-title"><!--pnid:RavUe5ZWMlBhCevGvJnR1F-->📊 月度分布 · <span data-page-node-id="bvRRSkFGBOcdysjvBY5m7Z" id="sbDistMonth"></span></div>
+          <div data-page-node-id="ulHzWsN7Ayd2Ze2jW4z121" class="sv-dist-body" id="sbDistBody"></div>
+          <div data-page-node-id="FdYDygPY62bmbSRQut7FxJ" class="sv-dist-total" id="sbDistTotal"></div>
+        </div>
+
+        <div data-page-node-id="XoKQiXKUzoUWTdyRVbYXc9" class="sv-card">
+          <div data-page-node-id="qOu1CjgiO8LKGtbCIIyXsE" class="sv-sec-title"><!--pnid:9caiUTodoxRcOghuazsY29-->📮 投递节奏 · 近7日</div>
+          <div data-page-node-id="ODvlWhzC83Nlafr9VtRgtN" class="sv-rhythm-bars" id="sbRhythmBars"></div>
+          <div data-page-node-id="uNdszhHqopdTLMLU8CA4bx" class="sv-rhythm-days" id="svRhythmDays"></div>
+          <div data-page-node-id="1envDGUXzomAWeTlF6pYEf" class="sv-dist-total" id="sbRhythmSum" style="margin-top:8px"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!--pnid:r1uheoPImWqoBj7v1s4Ga2--><!-- Add/Edit Modal -->
+  <div data-page-node-id="9bj9bOLoqEKb1jknElHNcp" class="modal-overlay" id="modalOverlay">
+    <div data-page-node-id="83p61M0zuFxww7P0I1u8QU" class="modal">
+      <h2 data-page-node-id="Xxc0udzkfPhiKnMXsAIqR2" id="modalTitle"><!--pnid:kCm61gXCw2I1rWusg64Gyd-->新增投递</h2>
+      <div data-page-node-id="QlVsNwK8Gq7dGd1Hk3YDkf" class="form-row">
+        <label data-page-node-id="hMfqVkVjB1Z3PJPHWBK0B4"><!--pnid:SxAEMc5RmSedi78MJ5N0TW-->企业名称 *</label>
+        <input data-page-node-id="nj8xYiuayYVo2FWTnHaaLM" id="modalCompany" placeholder="例：字节跳动" type="text">
+      </div>
+      <!--pnid:h7r9gJFfFfMzaF9aUKsGBq--><!-- 重复企业检测提示（实时，仅新增时） -->
+      <div data-page-node-id="w8gFT6zcwYCBBpPf15myqn" class="dup-hint" id="dupHint" style="display:none">
+        <span data-page-node-id="A0NIySdoGh5BPPNyhblTdJ" id="dupHintText"></span>
+        <button data-page-node-id="deZagRVxgEqHYyLnNhMfEn" class="dup-btn dup-go" id="dupGoBtn" type="button"><!--pnid:8duBc5LO74867PfiKpvYA3-->转为投递</button>
+        <button data-page-node-id="cd4KSWywDTMVtuSnOvGl8U" class="dup-btn" id="dupIgnoreBtn" type="button"><!--pnid:1Bu8Om6kpWjDEyWFusii2N-->忽略</button>
+      </div>
+      <div data-page-node-id="bQIM03v6TEnrwrV7FtgNAA" class="form-row">
+        <label data-page-node-id="hUaqaUrdNHPmZd5RhoK9Yb"><!--pnid:YrUU8JMPefhEAPNaeRcbPa-->Base</label>
+        <input data-page-node-id="KXLx73ptMeQqc4Dg6VCmPB" id="modalBase" placeholder="例：北京 / 上海 / 杭州" type="text">
+      </div>
+      <div data-page-node-id="nF5NtRuVnzIPY3YglFKnS7" class="form-row">
+        <label data-page-node-id="4XmEjbkvDBNtDfcGvwWs9U"><!--pnid:F2N9KJPAzVngRQauwinuB6-->投递岗位 *</label>
+        <input data-page-node-id="kghsj0KFbOWvzZGr0WDKKo" id="modalPosition" placeholder="例：前端开发工程师" type="text">
+      </div>
+      <div data-page-node-id="c0iz8OrVkGCUStU4cIG9rb" class="form-row">
+        <label data-page-node-id="INp5AuLxytLkMPOwD33hvf"><!--pnid:EUHKnseegqrbRLSFc5tu9B-->投递状态</label>
+        <select data-page-node-id="ZGPhLVuX0DrwiBS8uEaMo8" id="modalStatus">
+          <option data-page-node-id="xxlh4ZuHkOESmBOZSKqrLJ" value="已投简历"><!--pnid:ZTMxD8osAZPbW014Y4d9u4-->已投简历</option>
+          <option data-page-node-id="pQ2rNqfUhpBL8MGcQE0sEa" value="已过初筛"><!--pnid:6QycAqeS2ajtKn9GFr8H7v-->已过初筛</option>
+          <option data-page-node-id="J2EVEp0BWU1e2uFtDFJdLG" value="hr筛选"><!--pnid:0KlrzhT9Oa7NkxXCPS54p9-->hr筛选</option>
+          <option data-page-node-id="8WApmRD73bk1TMxWCXeyzs" value="业务筛选"><!--pnid:OGGXIqoJw05V8UXcxTi0Rm-->业务筛选</option>
+          <option data-page-node-id="aLt1nK9MRWZQYAGBR40eCr" value="待AI面试"><!--pnid:mWqQAL6DdhQ1ylukF5aOW1-->待AI面试</option>
+          <option data-page-node-id="FEDZnfh86KyVWCNWhVkoPA" value="待线上测评"><!--pnid:hpMyyf9OJ1BUGAJtUJnkCW-->待线上测评</option>
+          <option data-page-node-id="f3cYjvWFrx4MFBYdGQVEQy" value="面试"><!--pnid:pGEU7q3F6cPdaUReqO8RFF-->面试</option>
+          <option data-page-node-id="rvJSkf3zn6McWGpswCIrlu" value="评估中"><!--pnid:ohprOeCXbcL1sCYQF6L4Zn-->评估中</option>
+          <option data-page-node-id="f3rCD5RKbHvsOdV9UcahJB" value="等offer"><!--pnid:FLfQA3uLwjXpDerd4xm4fo-->等offer</option>
+          <option data-page-node-id="9ecaMm8ojnmjUXCLzX7Ls1" value="挂"><!--pnid:ef6Zo9WhCzGrgmv4f4J22V-->挂</option>
+        </select>
+      </div>
+      <div data-page-node-id="6PjdQ9GAwFIkUsr6twVsWA" class="form-row">
+        <label data-page-node-id="a5LYCJT2nCs2nAfSlQKzTX"><!--pnid:OlpR9ONZORxtYzErt5C7Ri-->投递日期</label>
+        <input data-page-node-id="armIjEQVJEPaeHpRzccaCx" id="modalDate" type="date">
+      </div>
+      <div data-page-node-id="cGYMAVsZk9oLkyHWIxH9Lh" class="form-row">
+        <label data-page-node-id="C2XOQJFdNoK6aEYSHRLj5z"><!--pnid:TNlBKP1IqN7OE3fFFTVI3D-->备注</label>
+        <textarea data-page-node-id="eZxZnzvxeOkuWJ98tFFIcm" id="modalNote" placeholder="面试时间、HR联系信息、笔试链接等" rows="3" style="font-family:inherit; font-size:14px; padding:8px 12px; border:1px solid var(--border); border-radius:6px; background:var(--surface-1); color:var(--text-primary); outline:none; resize:vertical"></textarea>
+      </div>
+      <div data-page-node-id="c41pAP829NQ1KjnfKgZ2R9" class="modal-actions">
+        <button data-page-node-id="11rsXDT1b2xw8YXkvzWU79" class="btn-cancel" id="modalCancel"><!--pnid:DF4HsdHLSxZXOkhJUE4Hru-->取消</button>
+        <button data-page-node-id="lpxikx9O42n60LlqyjzBkh" class="btn-save" id="modalSave"><!--pnid:AlTjgCRmGYuDeyXV6obpW5-->保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!--pnid:QbVdFzqnwJqs9PFAfRqpia--><!-- Watchlist Add/Edit Modal -->
+  <div data-page-node-id="1jKTsytbDybDv8bNu3BnUl" class="modal-overlay" id="watchModalOverlay">
+    <div data-page-node-id="dtaYbTqKyPNaYv1ah44nwI" class="modal">
+      <h2 data-page-node-id="hZEpuKZjC6yhnJs4qyVlE0" id="watchModalTitle"><!--pnid:athATqSkUNEUbm0zkUMVNq-->添加关注企业</h2>
+      <div data-page-node-id="Pm7kKXpSABByma1ipslFPZ" class="form-row">
+        <label data-page-node-id="Fo8rax079IlzvXfFm0vHns"><!--pnid:Wgvm3tsoQHgmzVwwLse68W-->企业名称 *</label>
+        <input data-page-node-id="uZ7F2Ub50Zv4LrmD18n9Yl" id="watchModalCompany" placeholder="例：米哈游" type="text">
+      </div>
+      <div data-page-node-id="StxnCvLezuPGnpUflbbiMH" class="form-row">
+        <label data-page-node-id="qaLXeOJNvaIoFq7H06EGzf"><!--pnid:7iICTl4B3eMDOJWq5Cfh0q-->想投的岗位</label>
+        <input data-page-node-id="2niG61NGzJrk9PATkHla6I" id="watchModalPosition" placeholder="例：前端开发工程师" type="text">
+      </div>
+      <div data-page-node-id="5R0HHsVPlJ0NSF6SGmnVvc" class="form-row">
+        <label data-page-node-id="iKqFQGDVr2XKYvIPnx8Usd"><!--pnid:3N6o7eymE2GWZ9wq3xsqm4-->预计开启秋招（可选）</label>
+        <input data-page-node-id="PVPCpy9YteVSSERXJ1wQUM" id="watchModalDate" type="date">
+      </div>
+      <div data-page-node-id="6uwozT0Lah0fUZKJJGbvWC" class="form-row">
+        <label data-page-node-id="O6Z2drVpCo15cmA1u7IV4Q"><!--pnid:3uIQt0YGyG7CO1XUUr5Hzz-->关注原因 / 备注</label>
+        <textarea data-page-node-id="N44B3snKQyN5LlwsQHVtcu" id="watchModalNote" placeholder="为什么关注、准备时间、官方链接等" rows="3" style="font-family:inherit; font-size:14px; padding:8px 12px; border:1px solid var(--border); border-radius:6px; background:var(--surface-1); color:var(--text-primary); outline:none; resize:vertical"></textarea>
+      </div>
+      <div data-page-node-id="T5TKtc2lOowYY0zamZfQtD" class="modal-actions">
+        <button data-page-node-id="SzArq2tv7qdYT5xZFdx68B" class="btn-cancel" id="watchModalCancel"><!--pnid:2ANB0Ze5ni8k5Dx5Q52wY7-->取消</button>
+        <button data-page-node-id="E8NwnTU9L1fpDhxmRkiABU" class="btn-save" id="watchModalSave"><!--pnid:T2QlX9Nwwl4YgHodVpSuaE-->保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!--pnid:zKOJKUj33EdZdgCsibekho--><!-- 返回顶部按钮 -->
+<button data-page-node-id="aCUkde9QoZxDdVkP9cJfFh" aria-label="返回顶部" class="back-top" id="backTopBtn"><!--pnid:VvtBsViTP0NGaHPO50UmRU-->↑</button>
+
+<script data-page-node-id="cCl3wRUK10p965jWlNEuKv" data-pnid-children="DW91xwbkc6DDzb5huuAv1e">
+(function() {
+  'use strict';
+
+  // ===== Status config =====
+  const STATUSES = ['已投简历', '已过初筛', 'hr筛选', '业务筛选', '待AI面试', '待线上测评', '面试', '评估中', '等offer', '挂'];
+
+  const STATUS_CSS_MAP = {
+    '已投简历': 'status-resume',
+    '已过初筛': 'status-screening',
+    '面试':     'status-interview',
+    '待AI面试': 'status-ai',
+    '待线上测评': 'status-online-assess',
+    'hr筛选':   'status-hr',
+    '业务筛选': 'status-biz',
+    '挂':       'status-rejected',
+    '评估中':   'status-evaluating',
+    '等offer':  'status-offer',
+  };
+
+  // 各状态的主题色（紧凑视图小卡底色 / 状态文字色）
+  const STATUS_COLORS = {
+    '已投简历': '#2a78d6',
+    '已过初筛': '#1baf7a',
+    'hr筛选':   '#4a3aa7',
+    '业务筛选': '#eda100',
+    '待AI面试': '#14b8a6',
+    '待线上测评': '#c2185b',
+    '面试':     '#eb6834',
+    '评估中':   '#3987e5',
+    '等offer':  '#0ca30c',
+    '挂':       '#e34948',
+  };
+
+  // ===== 赛道（track）：各大企业 / 央国企，数据各自独立 =====
+  const TRACKS = {
+    company: {
+      name: '各大企业', icon: '🏢',
+      keys: { records: 'autumn_recruit_tracker',       watch: 'autumn_recruit_watchlist',       sieve: 'autumn_recruit_sieve',       schedule: 'autumn_recruit_schedule' },
+    },
+    soe: {
+      name: '央国企', icon: '🏛',
+      keys: { records: 'autumn_recruit_tracker_soe',   watch: 'autumn_recruit_watchlist_soe',   sieve: 'autumn_recruit_sieve_soe',   schedule: 'autumn_recruit_schedule_soe' },
+    },
+  };
+  const TRACK_KEY = 'autumn_recruit_track';
+  let currentTrack = 'company';
+  let currentView = 'track'; // 'track' | 'schedule'
+  try {
+    const saved = localStorage.getItem(TRACK_KEY);
+    if (saved && TRACKS[saved]) currentTrack = saved;
+  } catch {}
+
+  // ===== 在线数据层：资料库 database 双向同步（localStorage 仅作离线兜底缓存） =====
+  // databaseId 为资料库数据表 ID（2026-09-02 创建），页面托管于资料库时 SDK 自动注入
+  // 数据表 ID 登记（与 DB_CONFIG 一一对应，供平台校验与人工核对）：
+  //   投递记录 databaseId: 'Qfresea6xyivpkxK5KbpAt'
+  //   关注清单 databaseId: 'ElMIw5SaP962Kds8a0tFPn'
+  //   秋招筛子 databaseId: 'WTn57bpJTiuNvVkhcKhaNg'
+  //   日程规划 databaseId: 'NNMBHnWBfgztcdYrkH6Zow'
+  const DB_CONFIG = {
+    records:  { id: 'Qfresea6xyivpkxK5KbpAt' },   // 投递记录 · 投递记录
+    watch:    { id: 'ElMIw5SaP962Kds8a0tFPn' },   // 投递记录 · 关注清单
+    sieve:    { id: 'WTn57bpJTiuNvVkhcKhaNg' },   // 投递记录 · 秋招筛子
+    schedule: { id: 'NNMBHnWBfgztcdYrkH6Zow' },   // 投递记录 · 日程规划
+  };
+  const TRACK_OPT = { company: '各大企业', soe: '央国企' };
+
+  const online = {
+    on: !!(window.__SMART_PAGE__ && window.__SMART_PAGE__.database),
+    db: (window.__SMART_PAGE__ && window.__SMART_PAGE__.database) || null,
+    mirror: {},   // kind -> Map<rid, {track, props}>：远端全量镜像，用于增量 diff
+    queue: Promise.resolve(),
+  };
+  // 串行队列：所有远端读写按序执行，避免竞态
+  function enqueue(fn) {
+    const p = online.queue.then(fn);
+    online.queue = p.catch(() => {});
+    return p;
+  }
+
+  // 远端行 → 本地记录（rid 为远端主键，id 为会话内引用）
+  function rowToItem(kind, r) {
+    const base = { rid: r._id, id: uid() };
+    if (kind === 'records') {
+      return Object.assign(base, { company: r['企业'] || '', base: r['Base'] || '', position: r['岗位'] || '', status: r['状态'] || '已投简历', date: (r['日期'] || '').slice(0, 10), note: r['备注'] || '' });
+    }
+    if (kind === 'watch') {
+      return Object.assign(base, { company: r['企业'] || '', position: r['岗位'] || '', expectedDate: (r['预计开放'] || '').slice(0, 10), note: r['备注'] || '' });
+    }
+    if (kind === 'sieve') {
+      return Object.assign(base, { company: r['企业'] || '', url: r['官网'] || '' });
+    }
+    return Object.assign(base, { company: r['企业'] || '', type: r['类型'] || '其他', time: r['时间'] || '', note: r['备注'] || '', done: !!r['完成'] });
+  }
+  // 本地记录 → 远端字段值（赛道可覆盖；空值剔除，避免写入空字段）
+  function itemToProps(kind, it, trackName) {
+    const t = trackName || TRACK_OPT[currentTrack];
+    const p = { '赛道': { select: t } };
+    if (kind === 'records') {
+      if (it.company) p['企业'] = { text: it.company };
+      if (it.base) p['Base'] = { text: it.base };
+      if (it.position) p['岗位'] = { text: it.position };
+      if (it.status) p['状态'] = { select: it.status };
+      if (it.date) p['日期'] = { date: it.date.slice(0, 10) };
+      if (it.note) p['备注'] = { text: it.note };
+    } else if (kind === 'watch') {
+      if (it.company) p['企业'] = { text: it.company };
+      if (it.position) p['岗位'] = { text: it.position };
+      if (it.expectedDate) p['预计开放'] = { date: it.expectedDate.slice(0, 10) };
+      if (it.note) p['备注'] = { text: it.note };
+    } else if (kind === 'sieve') {
+      if (it.company) p['企业'] = { text: it.company };
+      if (it.url) p['官网'] = { text: it.url };
+    } else {
+      if (it.company) p['企业'] = { text: it.company };
+      if (it.type) p['类型'] = { select: it.type };
+      if (it.time) p['时间'] = { text: it.time };
+      if (it.note) p['备注'] = { text: it.note };
+      p['完成'] = { checkbox: !!it.done };
+    }
+    return p;
+  }
+
+  // 从远端拉全量 → 过滤当前赛道 → 交给 assign 回填内存；首次使用（公司赛道）可用 seed 生成默认数据并上云
+  function onlinePull(kind, assign, seed) {
+    if (!online.on) return Promise.resolve(false);
+    return enqueue(async () => {
+      const cfg = DB_CONFIG[kind];
+      const rows = [];
+      let cursor = null;
+      while (true) {
+        const res = await online.db.query({ databaseId: cfg.id, pageSize: 100, startCursor: cursor || undefined });
+        rows.push.apply(rows, res.results || []);
+        if (!res.hasMore) break;
+        cursor = res.nextCursor;
+        if (!cursor) break;
+      }
+      online.mirror[kind] = new Map(rows.map(r => {
+        const it = rowToItem(kind, r);
+        const rowTrack = r['赛道'] || TRACK_OPT[currentTrack];
+        return [r._id, { track: rowTrack, props: JSON.stringify(itemToProps(kind, it, rowTrack)) }];
+      }));
+      const t = TRACK_OPT[currentTrack];
+      let items = rows.filter(r => (r['赛道'] || '') === t).map(r => rowToItem(kind, r));
+      if (!items.length && seed) items = seed() || [];
+      assign(items);
+      if (!items.length) { try { localStorage.removeItem(TRACKS[currentTrack].keys[kind]); } catch (e) {} }   // 远端该赛道已清空：失效本地兜底缓存，避免陈旧数据回流
+      if (items.some(i => !i.rid)) await pushStoreNow(kind, items, t);   // 首次使用：默认数据写入云端
+      return true;
+    });
+  }
+
+  // 增量同步（原始实现，调用方自行安排队列）：删除的删、新增的加、变更的改
+  async function pushStoreNow(kind, items, trackName) {
+    const t = trackName || TRACK_OPT[currentTrack];
+    const cfg = DB_CONFIG[kind];
+    const mirror = online.mirror[kind] || new Map();
+    const mine = [...mirror].filter(([, m]) => m.track === t);
+    const curIds = new Set(items.map(i => i.rid).filter(Boolean));
+    // 1) 删除：远端有、本地已无
+    for (const [rid] of mine) {
+      if (!curIds.has(rid)) {
+        try { await online.db.deleteRecord({ databaseId: cfg.id, recordId: rid }); } catch (e) { console.warn('[sync] delete fail', rid, e); }
+      }
+    }
+    // 2) 新增 / 修改
+    for (const it of items) {
+      const props = itemToProps(kind, it, t);
+      const propsStr = JSON.stringify(props);
+      if (it.rid && mirror.has(it.rid)) {
+        if (mirror.get(it.rid).props !== propsStr) {
+          try { await online.db.updateRecord({ databaseId: cfg.id, recordId: it.rid, properties: props }); } catch (e) { console.warn('[sync] update fail', it.rid, e); }
+        }
+      } else if (it.rid) {
+        console.warn('[sync] stale rid skip', it.rid);   // 镜像中不存在（跨设备被删）：跳过，避免重复建
+      } else {
+        try {
+          const res = await online.db.addRecord({ databaseId: cfg.id, properties: props });
+          if (res && (res.id || res.record_id)) it.rid = res.id || res.record_id;
+        } catch (e) { console.warn('[sync] add fail', e); }
+      }
+    }
+    // 3) 重建镜像：其它赛道原样保留 + 当前赛道按最新数据
+    const others = [...mirror].filter(([, m]) => m.track !== t);
+    const rebuilt = new Map(others);
+    items.forEach(i => { if (i.rid) rebuilt.set(i.rid, { track: t, props: JSON.stringify(itemToProps(kind, i, t)) }); });
+    online.mirror[kind] = rebuilt;
+  }
+
+  // 对外入口：有网则异步推送到远端（不阻塞 UI）
+  function pushStore(kind, items) {
+    if (!online.on) return;
+    enqueue(() => pushStoreNow(kind, items));
+  }
+
+  // ===== Store =====
+  let records = [];
+  let sortCol = 'date';
+  let sortDir = 'desc';   // 默认按投递日期倒序，最新在最上面
+  let editingId = null;
+
+  async function loadRecords() {
+    const loaded = await onlinePull('records', v => { records = v; }, () => (currentTrack === 'company' ? getDefaultRecords() : null));
+    if (!loaded) {
+      try {
+        const raw = localStorage.getItem(TRACKS[currentTrack].keys.records);
+        // 央国企赛道首次使用时为空，不套用各大企业的示例数据
+        records = raw ? JSON.parse(raw) : (currentTrack === 'company' ? getDefaultRecords() : []);
+      } catch {
+        records = currentTrack === 'company' ? getDefaultRecords() : [];
+      }
+    }
+    // migrate: ensure every record has a note field
+    records.forEach(r => { if (r.note === undefined) r.note = ''; });
+    try { localStorage.setItem(TRACKS[currentTrack].keys.records, JSON.stringify(records)); } catch {}
+  }
+
+  function saveRecords() {
+    try { localStorage.setItem(TRACKS[currentTrack].keys.records, JSON.stringify(records)); } catch {}
+    pushStore('records', records);
+    updateSidebarCounts();
+  }
+
+  // ===== Watchlist store (待启动关注清单) =====
+  let watchItems = [];
+
+  async function loadWatch() {
+    const loaded = await onlinePull('watch', v => { watchItems = v; }, () => (currentTrack === 'company' ? getDefaultWatchItems() : null));
+    if (!loaded) {
+      try {
+        const raw = localStorage.getItem(TRACKS[currentTrack].keys.watch);
+        // 央国企赛道：不合并各大企业的默认关注清单
+        if (currentTrack === 'soe') {
+          watchItems = raw ? JSON.parse(raw) : [];
+          watchItems.forEach(w => { if (w.note === undefined) w.note = ''; });
+          return;
+        }
+        const stored = raw ? JSON.parse(raw) : [];
+        const defaults = getDefaultWatchItems();
+        // 默认条目按企业名建索引，便于同步备注
+        const defaultByCompany = {};
+        defaults.forEach(d => { defaultByCompany[(d.company || '').trim()] = d; });
+        // 合并：保留本地已存条目，补充默认值中新增且不存在的企业（按企业名去重，重复跳过）
+        const storedNames = new Set((stored || []).map(w => (w.company || '').trim()));
+        const merged = (stored || []).slice();
+        defaults.forEach(d => {
+          if (!storedNames.has((d.company || '').trim())) merged.push(d);
+        });
+        // 备注同步：已存在企业的备注若仍是旧的「官网」自动生成样式（或为空），则用默认值刷新为招聘官网；
+        // 手动在应用内改过的备注（不含「官网」字样）予以保留。
+        merged.forEach(item => {
+          const def = defaultByCompany[(item.company || '').trim()];
+          if (def && ((item.note || '').includes('官网') || (item.note || '') === '')) {
+            item.note = def.note;
+          }
+        });
+        watchItems = merged;
+      } catch {
+        watchItems = currentTrack === 'company' ? getDefaultWatchItems() : [];
+      }
+    }
+    watchItems.forEach(w => { if (w.note === undefined) w.note = ''; });
+    saveWatch();
+  }
+
+  // ===== Default watchlist items (关注清单初始数据) =====
+  function getDefaultWatchItems() {
+    const defs = [
+      // 🟦 新能源
+      { company: '正浩创新',     position: '', expectedDate: '', note: '· 新能源 · 招聘官网 https://campus.ecoflow.com' },
+      { company: '华宝新能',     position: '', expectedDate: '', note: '· 新能源 · Jackery · 招聘官网 https://career.hello-tech.com' },
+      { company: '宁德时代',     position: '', expectedDate: '', note: '· 新能源 · 招聘官网 https://talent.catl.com/' },
+      { company: '比亚迪',       position: '', expectedDate: '', note: '· 新能源 · 招聘官网 https://job.byd.com' },
+      // 🟨 制造业
+      { company: 'TCL',          position: '', expectedDate: '', note: '· 制造业 · 招聘官网 https://campus.tcl.com/' },
+      { company: '美的',         position: '', expectedDate: '', note: '· 制造业 · 招聘官网 http://careers.midea.com/' },
+      { company: '海尔',         position: '', expectedDate: '', note: '· 制造业 · 招聘官网 https://maker.haier.net/client/campus/index' },
+      { company: '海信',         position: '', expectedDate: '', note: '· 制造业 · 招聘官网 https://jobs.hisense.com/campus' },
+      { company: '格力',         position: '', expectedDate: '', note: '· 制造业 · 招聘入口：官网「诚聘英才」 https://www.gree.com' },
+      { company: '创维',         position: '', expectedDate: '', note: '· 制造业 · 招聘官网 https://skyworth.hotjob.cn/' },
+      // 📱 手机厂
+      { company: '华为',         position: '', expectedDate: '', note: '· 手机厂 · 招聘官网 http://career.huawei.com/' },
+      { company: '小米',         position: '', expectedDate: '', note: '· 手机厂 · 招聘官网 https://hr.xiaomi.com/campus' },
+      { company: 'OPPO',         position: '', expectedDate: '', note: '· 手机厂 · 招聘官网 https://careers.oppo.com/campus' },
+      { company: 'vivo',         position: '', expectedDate: '', note: '· 手机厂 · 招聘官网 https://hr.vivo.com/' },
+      { company: '荣耀',         position: '', expectedDate: '', note: '· 手机厂 · 招聘官网 https://www.honor.com/cn/career' },
+      { company: '传音',         position: '', expectedDate: '', note: '· 手机厂 · 非洲 Transsion · 招聘官网 https://transsion.zhiye.com/Campus' },
+      { company: '一加',         position: '', expectedDate: '', note: '· 手机厂 · 招聘官网 https://career.oneplus.com/cn/campus' },
+      // 🪞 个护
+      { company: '徕芬',         position: '', expectedDate: '', note: '· 个护 · 招聘官网 https://www.laifen.net/' },
+      { company: 'Ulike',        position: '', expectedDate: '', note: '· 个护 · 由莱集团 · 招聘入口待确认（官方站） https://www.ulikebeauty.com/' },
+      { company: '飞利浦',       position: '', expectedDate: '', note: '· 个护 · 招聘官网 https://www.careers.philips.com/' },
+      // 🥽 VR眼镜
+      { company: 'Xreal',        position: '', expectedDate: '', note: '· VR眼镜 · 招聘官网 https://www.xreal.com/career' },
+      { company: '雷鸟',         position: '', expectedDate: '', note: '· VR眼镜 · 雷鸟创新（TCL） · 招聘官网 https://zhaopin.tcl.com/' },
+      // 🧹 清洁
+      { company: '石头科技',     position: '', expectedDate: '', note: '· 清洁 · 招聘官网 https://roborock.zhiye.com/campus' },
+      { company: '追觅',         position: '', expectedDate: '', note: '· 清洁 · MOVA · 招聘官网 https://dreame.zhiye.com/Campus' },
+      { company: '云鲸',         position: '', expectedDate: '', note: '· 清洁 · 招聘官网 https://careers.narwal.com/' },
+      { company: '科沃斯',       position: '', expectedDate: '', note: '· 清洁 · 招聘官网 https://hr.ecovacs.cn/' },
+      { company: '添可',         position: '', expectedDate: '', note: '· 清洁 · 招聘官网 https://www.tineco.com/joinus' },
+      { company: '元鼎',         position: '', expectedDate: '', note: '· 清洁 · 广州元鼎科技 · 泳池清洁 · 招聘官网 https://aiper.zhiye.com/campus' },
+      // 🖥 LED/商业显示(B端)
+      { company: '艾比森',       position: '', expectedDate: '', note: '· LED · 招聘官网 https://absen.zhiye.com/Campus' },
+      { company: '洲明',         position: '', expectedDate: '', note: '· LED · 招聘官网 https://unilumin.zhiye.com/Campus' },
+      { company: '诺瓦星云',     position: '', expectedDate: '', note: '· LED · 招聘官网 https://novastar.zhiye.com/campus' },
+      { company: 'KTC',          position: '', expectedDate: '', note: '· LED/商显 · 招聘官网 https://careerktc.zhiye.com/campus' },
+      { company: 'BenQ',         position: '', expectedDate: '', note: '· LED/商显 · 招聘官网 https://benq.zhiye.com/' },
+      // 🛴 电动/滑板车
+      { company: '九号公司',     position: '', expectedDate: '', note: '· 电动/滑板车 · 招聘官网 https://join.ninebot.com/campus' },
+      { company: '小牛电动',     position: '', expectedDate: '', note: '· 电动/滑板车 · 招聘官网 https://job.niu.com/' },
+      { company: '坦途',         position: '', expectedDate: '', note: '· 电动/滑板车 · 坦途创新（小米生态链） · 招聘：BOSS直聘/51job 搜「坦途创新」' },
+      // 🎥 监控/摄像头
+      { company: '睿联技术',     position: '', expectedDate: '', note: '· Reolink · 监控摄像头 · 招聘官网 https://hr.reolink.com.cn' },
+      { company: '萤石网络',     position: '', expectedDate: '', note: '· 智能家居/摄像头 · 招聘官网 https://job.ezviz.com' },
+      // 🔌 3C配件
+      { company: '安克',         position: '', expectedDate: '', note: '· 3C配件 · Anker（soundcore/eufy/nebula） · 招聘官网 https://career.anker-in.com' },
+      { company: '绿联',         position: '', expectedDate: '', note: '· 3C配件 · UGREEN · 招聘官网 https://careers.lulian.cn' },
+      { company: '倍思',         position: '', expectedDate: '', note: '· 3C配件 · Baseus · 招聘官网 https://hr.baseus.cn' },
+      { company: '傲基',         position: '', expectedDate: '', note: '· 3C配件 · AUKEY/傲基 · 招聘官网 https://aukeys.zhiye.com' },
+      { company: 'joyroom',      position: '', expectedDate: '', note: '· 3C配件 · 机乐堂 · 招聘官网 https://www.joyroom.com' },
+      { company: '酷态科',       position: '', expectedDate: '', note: '· 3C配件 · CUKTECH（小米系） · 招聘入口待确认（官方站） https://www.cuktech.com.cn' },
+      { company: '图拉斯',       position: '', expectedDate: '', note: '· 3C配件 · Torras · 招聘官网 https://lanhevip.jobs.feishu.cn/201093/' },
+      // 🎤 摄像音频
+      { company: '大疆',         position: '', expectedDate: '', note: '· 摄像音频 · DJI · 销售岗全驻外 · 招聘官网 https://careers.dji.com' },
+      { company: '影石',         position: '', expectedDate: '', note: '· 摄像音频 · Insta360 · 招聘官网 https://www.insta360.com/cn/jobs' },
+      { company: '韶音',         position: '', expectedDate: '', note: '· 摄像音频 · Shokz · 骨传导耳机 · 学历要求高 · 招聘官网 https://hr.shokz.com.cn' },
+      { company: '漫步者',       position: '', expectedDate: '', note: '· 摄像音频 · Edifier · 招聘官网 https://edifier.com.cn/careers.html' },
+      // 🖨 3D打印
+      { company: '拓竹',         position: '', expectedDate: '', note: '· 3D打印 · Bambu Lab · 难度大，需经验+工科背景 · 招聘官网 https://bambulab.jobs.feishu.cn/campus' },
+      { company: '创想三维',     position: '', expectedDate: '', note: '· 3D打印 · Creality · 招聘官网 https://creality.zhiye.com' },
+      { company: '纵维立方',     position: '', expectedDate: '', note: '· 3D打印 · Anycubic · 招聘官网 https://anycubic.zhiye.com' },
+      { company: '智能派',       position: '', expectedDate: '', note: '· 3D打印 · Elegoo · 招聘官网 https://www.elegoo.com.cn/index/join/index.html' },
+      // 📹 安防
+      { company: '海康威视',     position: '', expectedDate: '', note: '· 安防 · Hikvision · 招聘官网 https://talent.hikvision.com' },
+      { company: '大华',         position: '', expectedDate: '', note: '· 安防 · Dahua · 招聘官网 https://job.dahuatech.com' },
+      { company: 'TP-Link',      position: '', expectedDate: '', note: '· 安防/网络 · 招聘官网 https://hr.tp-link.com.cn' },
+    ];
+    return defs.map(d => ({ id: uid(), ...d }));
+  }
+
+  function saveWatch() {
+    try { localStorage.setItem(TRACKS[currentTrack].keys.watch, JSON.stringify(watchItems)); } catch {}
+    pushStore('watch', watchItems);
+  }
+
+  // ===== 秋招筛子 store（已开放秋招、待逐个核实岗位） =====
+  let sieveItems = [];
+
+  async function loadSieve() {
+    const loaded = await onlinePull('sieve', v => { sieveItems = v; }, null);
+    if (!loaded) {
+      try {
+        const raw = localStorage.getItem(TRACKS[currentTrack].keys.sieve);
+        sieveItems = raw ? JSON.parse(raw) : [];
+      } catch {
+        sieveItems = [];
+      }
+    }
+    try { localStorage.setItem(TRACKS[currentTrack].keys.sieve, JSON.stringify(sieveItems)); } catch {}
+  }
+  function saveSieve() {
+    try { localStorage.setItem(TRACKS[currentTrack].keys.sieve, JSON.stringify(sieveItems)); } catch {}
+    pushStore('sieve', sieveItems);
+  }
+
+  // ===== 日程规划 store（面试/笔试等流程安排，按赛道独立） =====
+  const SCHEDULE_TYPES = {
+    '笔试':     '#3987e5',
+    'AI面试':   '#8b5cf6',
+    '线上测评':  '#e0519c',
+    '一面':     '#eb6834',
+    '二面':     '#d97706',
+    '三面':     '#b45309',
+    '终面':     '#92400e',
+    'HR面':     '#d29922',
+    '电话沟通':  '#0ea5a5',
+    '面试':     '#f97316',   // 兼容旧数据
+    '其他':     '#64748b',
+  };
+  let scheduleItems = [];
+  let calMonth = new Date(); calMonth.setDate(1);   // 右侧日历当前显示的月份（每月 1 号）
+  let calSelected = null;                           // 点击日历选中的日期（yyyy-mm-dd）；null = 全部时间线
+  let pastOpen = false;                             // 「今天」之前的记录是否展开（默认折叠）
+
+  async function loadSchedule() {
+    const loaded = await onlinePull('schedule', v => { scheduleItems = v; }, null);
+    if (!loaded) {
+      try {
+        const raw = localStorage.getItem(TRACKS[currentTrack].keys.schedule);
+        scheduleItems = raw ? JSON.parse(raw) : [];
+      } catch {
+        scheduleItems = [];
+      }
+    }
+    scheduleItems.forEach(s => {
+      if (s.done === undefined) s.done = false;
+      if (s.note === undefined) s.note = '';
+      if (s.type === undefined) s.type = '其他';
+    });
+    try { localStorage.setItem(TRACKS[currentTrack].keys.schedule, JSON.stringify(scheduleItems)); } catch {}
+  }
+  function saveSchedule() {
+    try { localStorage.setItem(TRACKS[currentTrack].keys.schedule, JSON.stringify(scheduleItems)); } catch {}
+    pushStore('schedule', scheduleItems);
+  }
+
+  function schedRelLabel(timeStr) {
+    if (!timeStr) return '';
+    const t = new Date(timeStr);
+    if (isNaN(t)) return '';
+    const now = new Date();
+    const dayDiff = Math.round((new Date(t.toDateString()) - new Date(now.toDateString())) / 86400000);
+    if (dayDiff === 0) return '今天';
+    if (dayDiff === 1) return '明天';
+    if (dayDiff > 1) return `${dayDiff} 天后`;
+    if (dayDiff === -1) return '昨天';
+    return `${-dayDiff} 天前`;
+  }
+
+  function renderSidebarSchedule() {
+    renderCal();
+    renderSchedTimeline();
+    renderSchedDist();
+    renderRhythm();
+  }
+
+  // ===== 月份日历（右侧面板 · 事件以彩色圆点呈现，点击日期筛选时间线） =====
+  function renderCal() {
+    const grid = document.getElementById('sbCalGrid');
+    const monthEl = document.getElementById('sbCalMonth');
+    if (!grid || !monthEl) return;
+    const y = calMonth.getFullYear(), m = calMonth.getMonth();
+    monthEl.textContent = `${y}年${m + 1}月`;
+
+    const startDow = new Date(y, m, 1).getDay();                  // 0=周日
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const todayKey = toDateKey(new Date());
+
+    // 按日期归集事件
+    const evByDay = {};
+    scheduleItems.forEach(s => {
+      if (!s.time) return;
+      const k = toDateKey(new Date(s.time));
+      (evByDay[k] = evByDay[k] || []).push(s);
+    });
+
+    const cells = [];
+    const prevDays = new Date(y, m, 0).getDate();
+    for (let i = startDow - 1; i >= 0; i--) cells.push(`<div class="sv-cell other">${prevDays - i}</div>`);
+    for (let d = 1; d <= daysInMonth; d++) {
+      const k = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const evs = evByDay[k] || [];
+      const cls = ['sv-cell'];
+      if (k === todayKey) cls.push('today');
+      if (k === calSelected) cls.push('sel');
+      let inner = `<span class="d">${d}</span>`;
+      if (evs.length) {
+        inner += `<span class="dots">` + evs.slice(0, 5).map(s => {
+          const c = SCHEDULE_TYPES[s.type] || SCHEDULE_TYPES['其他'];
+          const tip = `${esc(s.company)} · ${esc(s.type)}`;
+          return `<span class="dot" style="background:${c}" title="${tip}"></span>`;
+        }).join('') + `</span>`;
+        if (evs.length > 5) inner += `<span class="more">+${evs.length - 5}</span>`;
+      }
+      cells.push(`<div class="${cls.join(' ')}" data-key="${k}">${inner}</div>`);
+    }
+    const total = startDow + daysInMonth;
+    const trail = (7 - (total % 7)) % 7;
+    for (let i = 1; i <= trail; i++) cells.push(`<div class="sv-cell other">${i}</div>`);
+    grid.innerHTML = cells.join('');
+
+    // 点击日期：时间线只看当天（再点一次取消）；同时把日期预填到新增表单
+    grid.querySelectorAll('.sv-cell[data-key]').forEach(cell => {
+      cell.addEventListener('click', () => {
+        const k = cell.dataset.key;
+        calSelected = (calSelected === k) ? null : k;
+        if (calSelected) {
+          const timeEl = document.getElementById('schedTime');
+          if (timeEl) {
+            const old = timeEl.value;
+            const t = old.length > 10 ? old.slice(10) : 'T09:00';
+            timeEl.value = k + t;
+          }
+        }
+        renderCal();
+        renderSchedTimeline();
+      });
+    });
+  }
+
+  // ===== 线性时间线：全部日程按时间从早到晚排列，按日期分组 =====
+  function renderSchedTimeline() {
+    const box = document.getElementById('sbSchedTimeline');
+    const titleEl = document.getElementById('sbSchedEventsTitle');
+    const todayKey = toDateKey(new Date());
+
+    const withTime = scheduleItems.filter(s => s.time).slice()
+      .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+
+    let items = withTime, focusLabel = null;
+    if (calSelected) {
+      // 日历选中了某一天：时间线只看当天
+      items = withTime.filter(s => toDateKey(new Date(s.time)) === calSelected);
+      const p = calSelected.split('-');
+      focusLabel = `${Number(p[1])}/${Number(p[2])} 当日安排`;
+    }
+
+    titleEl.innerHTML = `<span>${focusLabel ? `📌 ${focusLabel}` : '📌 全部安排 · 时间线'}</span>` +
+      (focusLabel ? `<button class="sc-clear" id="sbSchedClear" title="回到全部时间线">✕ 全部</button>` : '');
+
+    if (items.length === 0) {
+      box.innerHTML = `<div class="sv-empty">${focusLabel ? '当日无安排' : '暂无安排 · 在上方表单添加'}</div>`;
+    } else {
+      // 按日期归组
+      const groups = [];
+      items.forEach(s => {
+        const k = toDateKey(new Date(s.time));
+        if (!groups.length || groups[groups.length - 1].key !== k) groups.push({ key: k, items: [] });
+        groups[groups.length - 1].items.push(s);
+      });
+
+      // 单个日期分组的 HTML
+      const dayHTML = (g) => {
+        const wd = '日一二三四五六'[new Date(g.key + 'T00:00').getDay()];
+        const rel = schedRelLabel(g.key + 'T12:00');
+        const isPast = g.key < todayKey;
+        const relCls = g.key === todayKey ? ' is-today' : '';
+        return `<div class="tl-day${isPast ? ' is-past' : ''}">
+          <div class="tl-day-head">
+            <span class="tl-date">${Number(g.key.slice(5, 7))}/${Number(g.key.slice(8, 10))}</span>
+            <span class="tl-wd">周${wd}</span>
+            ${rel ? `<span class="tl-rel${relCls}">${esc(rel)}</span>` : ''}
+            <span class="tl-cnt">${g.items.length} 项</span>
+          </div>
+          <div class="tl-evts">` +
+          g.items.map(s => {
+            const color = SCHEDULE_TYPES[s.type] || SCHEDULE_TYPES['其他'];
+            const hm = s.time && s.time.length > 10 ? s.time.slice(11, 16) : '';
+            return `<div class="sv-evt${s.done ? ' done' : ''}" style="--evt-c:${color}">
+              <div class="e-main">
+                <div class="e-row">
+                  <span class="e-co" title="${esc(s.company)}">${esc(s.company)}</span>
+                  <span class="e-type">${esc(s.type)}</span>
+                </div>
+                ${s.note ? `<span class="e-note" title="${esc(s.note)}">${esc(s.note)}</span>` : ''}
+              </div>
+              <div class="e-side">
+                <span class="e-time">${hm}</span>
+                ${s.done ? '<span class="e-rel">已完成</span>' : ''}
+              </div>
+              <button class="e-btn tgl sc-toggle" data-id="${s.id}" title="${s.done ? '恢复未完成' : '标记完成'}">${s.done ? '↺' : '✓'}</button>
+              <button class="e-btn del sc-del" data-id="${s.id}" title="删除">✕</button>
+            </div>`;
+          }).join('') +
+          `</div></div>`;
+      };
+
+      let html = '';
+      const pastGroups = groups.filter(g => g.key < todayKey);
+      const restGroups = groups.filter(g => g.key >= todayKey);
+
+      // 「今天」之前的记录：默认折叠为一条摘要，点击展开（按日筛选时不折叠）
+      if (!calSelected && pastGroups.length) {
+        const nDays = pastGroups.length;
+        const nItems = pastGroups.reduce((a, g) => a + g.items.length, 0);
+        html += `<div class="tl-past${pastOpen ? ' open' : ''}" id="tlPast">
+          <div class="tl-past-head" id="tlPastHead" title="${pastOpen ? '收起过去的记录' : '展开过去的记录'}">
+            <span class="arrow">▸</span>
+            <span>🗂 已过去的安排 · ${nDays} 天 / ${nItems} 项</span>
+            <span class="hint">${pastOpen ? '点击收起' : '点击展开'}</span>
+          </div>
+          <div class="tl-past-body">${pastGroups.map(dayHTML).join('')}</div>
+        </div>`;
+      } else {
+        html += pastGroups.map(dayHTML).join('');
+      }
+
+      // 「今天」标记 + 今天及之后的记录
+      let todayInserted = false;
+      restGroups.forEach(g => {
+        if (!calSelected && !todayInserted) {
+          html += `<div class="tl-today-mark" id="tlToday"><span class="t-txt">📍 今天</span><span class="t-line"></span></div>`;
+          todayInserted = true;
+        }
+        html += dayHTML(g);
+      });
+      box.innerHTML = html;
+    }
+
+    const clr = document.getElementById('sbSchedClear');
+    if (clr) clr.addEventListener('click', () => { calSelected = null; renderCal(); renderSchedTimeline(); });
+    const ph = document.getElementById('tlPastHead');
+    if (ph) ph.addEventListener('click', () => {
+      pastOpen = !pastOpen;
+      renderSchedTimeline();
+      if (pastOpen) requestAnimationFrame(() => {
+        ph.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+    box.querySelectorAll('.sc-toggle').forEach(b => b.addEventListener('click', () => {
+      const it = scheduleItems.find(x => x.id === b.dataset.id);
+      if (!it) return;
+      it.done = !it.done; saveSchedule(); renderSidebarSchedule();
+    }));
+    box.querySelectorAll('.sc-del').forEach(b => b.addEventListener('click', () => {
+      scheduleItems = scheduleItems.filter(x => x.id !== b.dataset.id);
+      saveSchedule(); renderSidebarSchedule();
+    }));
+  }
+
+  // ===== 月度分布：当前日历月份各类型事项数量分布 =====
+  function renderSchedDist() {
+    const body = document.getElementById('sbDistBody');
+    const monthEl = document.getElementById('sbDistMonth');
+    const totalEl = document.getElementById('sbDistTotal');
+    if (!body) return;
+
+    // 未聚焦月份时统计当前月份；聚焦时统计该月
+    const base = calMonth || new Date();
+    const y = base.getFullYear(), m = base.getMonth();
+    monthEl.textContent = `${y}年${m + 1}月`;
+
+    // 筛选当前日历月份内的所有事项（含已完成）
+    const monthItems = scheduleItems.filter(s => {
+      if (!s.time) return false;
+      const t = new Date(s.time);
+      return t.getFullYear() === y && t.getMonth() === m;
+    });
+
+    if (monthItems.length === 0) {
+      body.innerHTML = '<div class="sv-empty">本月暂无安排</div>';
+      totalEl.textContent = '';
+      return;
+    }
+
+    // 按类型统计
+    const typeOrder = Object.keys(SCHEDULE_TYPES);
+    const counts = {};
+    typeOrder.forEach(t => counts[t] = 0);
+    monthItems.forEach(s => {
+      const t = s.type || '其他';
+      if (counts[t] === undefined) counts[t] = 0;
+      counts[t]++;
+    });
+
+    const maxC = Math.max(1, ...Object.values(counts));
+    body.innerHTML = typeOrder
+      .filter(t => counts[t] > 0)
+      .sort((a, b) => counts[b] - counts[a])
+      .map(t => {
+        const c = SCHEDULE_TYPES[t] || SCHEDULE_TYPES['其他'];
+        const cnt = counts[t];
+        const w = Math.round(cnt / maxC * 100);
+        const pct = Math.round(cnt / monthItems.length * 100);
+        return `<div class="sv-dist-row">
+          <span class="n">${esc(t)}</span>
+          <span class="b"><i style="width:${w}%;background:${c}"></i></span>
+          <span class="c">${cnt}</span>
+          <span class="p">${pct}%</span>
+        </div>`;
+      }).join('');
+    totalEl.textContent = `本月共 ${monthItems.length} 项 · 按数量排序`;
+  }
+
+  document.getElementById('schedAddBtn').addEventListener('click', () => {
+    const companyEl = document.getElementById('schedCompany');
+    const timeEl = document.getElementById('schedTime');
+    const company = companyEl.value.trim();
+    const type = document.getElementById('schedType').value;
+    const time = timeEl.value;
+    const note = document.getElementById('schedNote').value.trim();
+    if (!company) { alert('请填写企业名称'); companyEl.focus(); return; }
+    if (!time) { alert('请选择时间'); timeEl.focus(); return; }
+    const item = { id: uid(), company, type, time, note, done: false };
+    scheduleItems.push(item);
+    saveSchedule();
+    // 日历跳到该事件所在月份，时间线回到全部并滚动定位到新事项（落在过去则自动展开折叠区）
+    const dt = new Date(time);
+    if (!isNaN(dt)) calMonth = new Date(dt.getFullYear(), dt.getMonth(), 1);
+    calSelected = null;
+    if (!isNaN(dt) && toDateKey(dt) < toDateKey(new Date())) pastOpen = true;
+    renderSidebarSchedule();
+    requestAnimationFrame(() => {
+      const btn = document.querySelector(`#sbSchedTimeline .sc-del[data-id="${item.id}"]`);
+      const target = btn ? btn.closest('.tl-day') : null;
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    companyEl.value = '';
+    timeEl.value = '';
+    document.getElementById('schedNote').value = '';
+  });
+
+  // 回到今天：日历回到本月，时间线回到全部并定位到「今天」标记
+  document.getElementById('sbCalToday').addEventListener('click', () => {
+    const now = new Date();
+    calMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    calSelected = null;
+    renderSidebarSchedule();
+    requestAnimationFrame(() => {
+      const mark = document.getElementById('tlToday');
+      const first = document.querySelector('#sbSchedTimeline .tl-day:not(.is-past)');
+      const target = mark || first;
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  });
+  // 日历翻月：切换日历与月度分布，取消按日筛选
+  document.getElementById('sbCalPrev').addEventListener('click', () => {
+    calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1);
+    calSelected = null;
+    renderCal();
+    renderSchedDist();
+  });
+  document.getElementById('sbCalNext').addEventListener('click', () => {
+    calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1);
+    calSelected = null;
+    renderCal();
+    renderSchedDist();
+  });
+
+  // ===== Default records (sample data) =====
+  function getDefaultRecords() {
+    const today = new Date();
+    const d = (offset) => {
+      const t = new Date(today);
+      t.setDate(t.getDate() + offset);
+      return t.toISOString().slice(0, 10);
+    };
+    return [
+      { id: uid(), company: '字节跳动', base: '北京', position: '前端开发工程师', status: '面试',         date: d(-12), note: '一面已过，等待二面通知' },
+      { id: uid(), company: '阿里巴巴', base: '杭州', position: 'Java开发工程师',  status: '业务筛选',     date: d(-10), note: '业务部门筛选中' },
+      { id: uid(), company: '腾讯',     base: '深圳', position: '全栈开发工程师',  status: '已过初筛',     date: d(-8),  note: '初筛通过，等待笔试' },
+      { id: uid(), company: '美团',     base: '北京', position: '后端开发工程师',  status: 'hr筛选',       date: d(-7),  note: '' },
+      { id: uid(), company: '小红书',   base: '上海', position: '前端开发工程师',  status: '已投简历',     date: d(-5),  note: '内推渠道投递' },
+      { id: uid(), company: '百度',     base: '北京', position: '算法工程师',      status: '评估中',       date: d(-4),  note: '' },
+      { id: uid(), company: '快手',     base: '北京', position: '客户端开发',      status: '挂',           date: d(-3),  note: '二面挂，算法题没答好' },
+      { id: uid(), company: '拼多多',   base: '上海', position: '服务端开发',      status: '已投简历',     date: d(-2),  note: '牛客网投递' },
+      { id: uid(), company: '蔚来',     base: '上海', position: '嵌入式开发',      status: '面试',         date: d(-1),  note: '下周一四面' },
+      { id: uid(), company: '蚂蚁集团', base: '杭州', position: '前端开发工程师',  status: '等offer',      date: d(-6),  note: 'HR说本周出结果' },
+    ];
+  }
+
+  let _uid = Date.now();
+  function uid() { return (_uid++).toString(36); }
+
+  // ===== Watchlist render =====
+  function renderWatchlist() {
+    const tbody = document.getElementById('watchlistBody');
+    const empty = document.getElementById('watchlistEmpty');
+
+    if (watchItems.length === 0) {
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    // 按预计开启时间排序，没填的排最后
+    const sorted = watchItems.slice().sort((a, b) => {
+      const da = a.expectedDate || '';
+      const db = b.expectedDate || '';
+      if (da === db) return 0;
+      if (!da) return 1;
+      if (!db) return -1;
+      return da.localeCompare(db);
+    });
+
+    tbody.innerHTML = sorted.map(w => {
+      const dateCell = w.expectedDate
+        ? `<span class="watch-date">🗓 <span class="date-val">${esc(w.expectedDate)}</span></span>`
+        : '<span style="color:var(--muted)">🗓 未定</span>';
+      // 备注里的「· 分类 ·」前缀提取成卡片标签，剩余部分照常展示（网址可点击）
+      const noteRaw = w.note || '';
+      const catMatch = noteRaw.match(/^·\s*([^·]+?)\s*·/);
+      const category = catMatch ? catMatch[1].trim() : '';
+      const noteRest = category ? noteRaw.slice(catMatch[0].length).trim() : noteRaw;
+      const noteCell = linkifyText(noteRest);
+      const catTag = category ? `<span class="wc-tag" title="分类：${esc(category)}">${esc(category)}</span>` : '';
+      const posLine = w.position ? `💼 ${esc(w.position)}` : '';
+      return `<div class="watch-card" data-id="${w.id}">
+        <div class="wc-head">
+          <strong>${esc(w.company)}</strong>${catTag}
+        </div>
+        <div class="wc-meta">
+          ${posLine}${posLine ? ' ' : ''}${dateCell}
+        </div>
+        <div class="wc-note" title="${esc(noteRest)}">${noteCell || '<span style="color:var(--muted)">无备注</span>'}</div>
+        <div class="wc-actions">
+          <button class="watch-add" data-id="${w.id}">转投递</button>
+          <button class="watch-edit" data-id="${w.id}">编辑</button>
+          <button class="watch-del" data-id="${w.id}">删除</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Bind watch actions
+    tbody.querySelectorAll('.watch-add').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const item = watchItems.find(w => w.id === btn.dataset.id);
+        if (item) openWatchToApp(item);
+      });
+    });
+    tbody.querySelectorAll('.watch-edit').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const item = watchItems.find(w => w.id === btn.dataset.id);
+        if (item) openWatchModal(item);
+      });
+    });
+    tbody.querySelectorAll('.watch-del').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        watchItems = watchItems.filter(w => w.id !== id);
+        saveWatch();
+        renderWatchlist();
+      });
+    });
+  }
+
+  // ===== 秋招筛子 render =====
+  // 企业名归一化：去掉空格、括号、分隔符等干扰字符
+  function normName(s) {
+    return (s || '').replace(/[\s（）()·\-—_|,，、;；]/g, '').toLowerCase();
+  }
+  // 查这家企业是否已投过（企业名归一化后相等，或互为包含）
+  function appliedInfo(company) {
+    const n = normName(company);
+    if (!n) return null;
+    let cnt = 0, last = null;
+    records.forEach(r => {
+      const rc = normName(r.company);
+      if (rc && rc === n) { cnt++; last = r; return; }
+      if (rc.length >= 2 && n.length >= 2 && (rc.includes(n) || n.includes(rc))) {
+        cnt++; last = r;
+      }
+    });
+    return cnt ? { cnt, last } : null;
+  }
+  // 按搜索框关键字过滤 chip
+  function applySieveFilter() {
+    const input = document.getElementById('sieveSearch');
+    if (!input) return;
+    const q = (input.value || '').trim().toLowerCase();
+    document.querySelectorAll('#sieveBody .sieve-chip').forEach(chip => {
+      const name = chip.querySelector('strong');
+      const text = name ? (name.textContent || '') : '';
+      chip.classList.toggle('is-hidden', !!q && !text.toLowerCase().includes(q));
+    });
+  }
+  function renderSieve() {
+    const box = document.getElementById('sieveBody');
+    const empty = document.getElementById('sieveEmpty');
+    const count = document.getElementById('sieveCount');
+
+    let appliedN = 0;
+    const infos = sieveItems.map(it => {
+      const ap = appliedInfo(it.company);
+      if (ap) appliedN++;
+      return ap;
+    });
+    count.textContent = sieveItems.length
+      ? `待筛选 ${sieveItems.length} 家${appliedN ? ` · 已投 ${appliedN}` : ''}`
+      : '篓子为空';
+
+    if (sieveItems.length === 0) {
+      box.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    box.innerHTML = sieveItems.map((it, i) => {
+      const url = it.url || '';
+      const link = url
+        ? `<a class="sieve-chip-link" href="${esc(url)}" target="_blank" rel="noopener" title="${esc(url)}">🌐</a>`
+        : '';
+      const ap = infos[i];
+      const apCls = ap ? ' is-applied' : '';
+      const apTag = ap
+        ? `<span class="applied-tag" title="${ap.last && ap.last.status ? '最新状态：' + esc(ap.last.status) : '已在投递记录中'}">✓ 已投${ap.cnt > 1 ? '×' + ap.cnt : ''}</span>`
+        : '';
+      return `<span class="sieve-chip${apCls}" data-id="${it.id}">
+        ${apTag}<strong>${esc(it.company)}</strong>${link}
+        <button class="sieve-add" data-id="${it.id}" title="转为投递">投递</button>
+        <button class="sieve-del" data-id="${it.id}" title="删除（官网没有合适岗位）">✕</button>
+      </span>`;
+    }).join('');
+    applySieveFilter();
+
+    // 转为投递：填入投递弹窗，并从筛子移除
+    box.querySelectorAll('.sieve-add').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const item = sieveItems.find(x => x.id === btn.dataset.id);
+        if (!item) return;
+        editingId = null;
+        modalTitle.textContent = '新增投递';
+        modalCompany.value = item.company;
+        modalBase.value = '';
+        modalPosition.value = '';
+        modalStatus.value = '已投简历';
+        modalDate.value = new Date().toISOString().slice(0, 10);
+        modalNote.value = (item.url ? `${item.url} ` : '') + '（来自秋招筛子）';
+        hideDupHint();
+        overlay.classList.add('active');
+        modalPosition.focus();
+        sieveItems = sieveItems.filter(x => x.id !== item.id);
+        saveSieve();
+        renderSieve();
+      });
+    });
+    // 删除：官网没有合适岗位
+    box.querySelectorAll('.sieve-del').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        sieveItems = sieveItems.filter(x => x.id !== id);
+        saveSieve();
+        renderSieve();
+      });
+    });
+  }
+
+  // 把批量/单个输入解析成一条条企业数据
+  function buildSieveEntries() {
+    const out = [];
+    const batchRaw = document.getElementById('sieveBatchInput').value || '';
+    batchRaw.split(/[\n,，;；、]/).forEach(line => {
+      const t = line.trim();
+      if (!t) return;
+      out.push(parseSieveLine(t));
+    });
+    const single = (document.getElementById('sieveSingle').value || '').trim();
+    const singleUrl = (document.getElementById('sieveSingleUrl').value || '').trim();
+    if (single) out.push({ company: single, url: singleUrl });
+    return out;
+  }
+  // 从一行文本里取出「企业名」和「网址」
+  function parseSieveLine(line) {
+    const m = line.match(/(https?:\/\/[^\s]+)/);
+    if (m) {
+      const url = m[1];
+      const company = line.replace(url, '').trim();
+      return { company: company || url, url };
+    }
+    return { company: line, url: '' };
+  }
+  // 放入篓子：去重后逐条加入
+  function addSieveEntries(entries) {
+    let added = 0;
+    entries.forEach(e => {
+      const name = (e.company || '').trim();
+      if (!name) return;
+      if (sieveItems.some(x => x.company === name)) return; // 已存在则跳过
+      sieveItems.push({ id: uid(), company: name, url: (e.url || '').trim() });
+      added++;
+    });
+    if (added > 0) {
+      saveSieve();
+      renderSieve();
+    }
+    // 清空输入框，便于连续录入
+    document.getElementById('sieveBatchInput').value = '';
+    document.getElementById('sieveSingle').value = '';
+    document.getElementById('sieveSingleUrl').value = '';
+  }
+
+  document.getElementById('sieveAddBtn').addEventListener('click', () => {
+    addSieveEntries(buildSieveEntries());
+  });
+
+  // 篓内查找：按企业名实时过滤
+  document.getElementById('sieveSearch').addEventListener('input', applySieveFilter);
+
+  // ===== Render =====
+  function render() {
+    const search = (document.getElementById('filterSearch').value || '').trim().toLowerCase();
+    const statusFilter = document.getElementById('filterStatus').value;
+
+    let filtered = records.filter(r => {
+      if (search && !r.company.toLowerCase().includes(search) &&
+          !r.position.toLowerCase().includes(search) &&
+          !(r.base || '').toLowerCase().includes(search) &&
+          !(r.note || '').toLowerCase().includes(search)) return false;
+      if (statusFilter && r.status !== statusFilter) return false;
+      return true;
+    });
+
+    // Sort
+    if (sortCol) {
+      filtered.sort((a, b) => {
+        // 无日期的记录始终排在最后，避免颠倒或混到最前
+        const getD = r => r.date || '';
+        if (sortCol === 'date') {
+          const da = getD(a), dbv = getD(b);
+          if (!da && !dbv) return 0;
+          if (!da) return 1;    // a 无日期 → 排后
+          if (!dbv) return -1;  // b 无日期 → 排后
+          return sortDir === 'asc' ? da.localeCompare(dbv, 'zh-CN') : dbv.localeCompare(da, 'zh-CN');
+        }
+        let va = (a[sortCol] || '').toString();
+        let vb = (b[sortCol] || '').toString();
+        const cmp = va.localeCompare(vb, 'zh-CN');
+        return sortDir === 'asc' ? cmp : -cmp;
+      });
+    }
+
+    const tbody = document.getElementById('tableBody');
+    const empty = document.getElementById('emptyState');
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+    } else {
+      empty.style.display = 'none';
+      // 视图模式：detail = 一行一家全信息；compact = 一行四家简略
+      tbody.className = 'rec-grid ' + (recordsView === 'compact' ? 'rv-compact' : 'rv-detail');
+
+      if (recordsView === 'compact') {
+        // ===== 紧凑视图：仅公司名 + 状态，底色区分状态 =====
+        tbody.innerHTML = filtered.map(r => {
+          const c = STATUS_COLORS[r.status] || '#898781';
+          const tip = `${r.company} · ${r.status}${r.position ? ' · ' + r.position : ''}${r.date ? ' · ' + r.date : ''}${r.note ? '\n' + r.note : ''}`;
+          return `<div class="rec-mini" data-id="${r.id}" title="${esc(tip)}"
+            style="background:color-mix(in srgb, ${c} 13%, var(--surface-1)); border-color:color-mix(in srgb, ${c} 38%, transparent)">
+            <span class="rm-name">${esc(r.company)}</span>
+            <span class="rm-status" style="color:${c}">${esc(r.status)}</span>
+          </div>`;
+        }).join('');
+
+        // 点击小卡 = 打开编辑弹窗
+        tbody.querySelectorAll('.rec-mini').forEach(card => {
+          card.addEventListener('click', () => {
+            const record = records.find(r => r.id === card.dataset.id);
+            if (record) openModal(record);
+          });
+        });
+      } else {
+        // ===== 详细视图：一行一家，完整信息 =====
+        tbody.innerHTML = filtered.map(r => {
+          const statusClass = STATUS_CSS_MAP[r.status] || 'status-resume';
+          // 备注里的网址会被渲染成可点击链接（其余文本保持原样）
+          const noteCell = r.note ? linkifyText(r.note) : '';
+          const isDead = r.status === '挂';
+          return `<div class="rec-card${isDead ? ' rc-dead' : ''}">
+            <div class="rc-head">
+              <strong title="${esc(r.company)}">${esc(r.company)}</strong>
+              <span class="status-badge ${statusClass}">${esc(r.status)}</span>
+            </div>
+            <div class="rc-meta">
+              <span class="rc-pos">💼 ${esc(r.position || '-')}</span>
+              ${r.base ? `<span>📍 ${esc(r.base)}</span>` : ''}
+              ${r.date ? `<span>🗓 ${esc(r.date)}</span>` : ''}
+            </div>
+            ${noteCell ? `<div class="rc-note" title="${esc(r.note)}">${noteCell}</div>` : ''}
+            <div class="rc-actions">
+              <button class="rc-edit" data-id="${r.id}">编辑</button>
+              <button class="rc-del" data-id="${r.id}">删除</button>
+            </div>
+          </div>`;
+        }).join('');
+
+        // Bind delete buttons
+        tbody.querySelectorAll('.rc-del').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.dataset.id;
+            records = records.filter(r => r.id !== id);
+            saveRecords();
+            render();
+          });
+        });
+
+        // Bind edit buttons
+        tbody.querySelectorAll('.rc-edit').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.dataset.id;
+            const record = records.find(r => r.id === id);
+            if (record) openModal(record);
+          });
+        });
+      }
+    }
+
+    // Update stats
+    updateStats();
+
+    // 投递记录变化后，同步刷新篓子里的「已投」绿色标记
+    renderSieve();
+  }
+
+  function updateStats() {
+    const total = records.length;
+    const counts = {};
+    STATUSES.forEach(s => counts[s] = 0);
+    records.forEach(r => { if (counts[r.status] !== undefined) counts[r.status]++; });
+
+    const offerCount = counts['等offer'] || 0;
+    const activeCount = records.filter(r => !['挂', '等offer'].includes(r.status)).length;
+
+    document.getElementById('statsRow').innerHTML = `
+      <div class="stat-tile"><span class="stat-value">${total}</span><span class="stat-label">总投递</span></div>
+      <div class="stat-tile"><span class="stat-value" style="color:var(--status-warning)">${activeCount}</span><span class="stat-label">进行中</span></div>
+      <div class="stat-tile"><span class="stat-value" style="color:var(--status-good)">${offerCount}</span><span class="stat-label">等 offer</span></div>
+      <div class="stat-tile"><span class="stat-value" style="color:var(--status-critical)">${counts['挂'] || 0}</span><span class="stat-label">已挂</span></div>
+    `;
+
+    renderRhythm();
+  }
+
+  // ===== 投递节奏（侧边栏子模块 · 极简）：近 7 日柱状 =====
+  function renderRhythm() {
+    const dayCount = {};   // 日期(yyyy-mm-dd) -> 数量
+    records.forEach(r => {
+      if (r.date) dayCount[r.date] = (dayCount[r.date] || 0) + 1;
+    });
+
+    const today = new Date();
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const t = new Date(today);
+      t.setDate(today.getDate() - i);
+      const key = toDateKey(t);
+      days.push({ key, count: dayCount[key] || 0, dow: t.getDay() });
+    }
+    const bars = document.getElementById('sbRhythmBars');
+    const sum = document.getElementById('sbRhythmSum');
+    if (!bars) return;
+    const maxC = Math.max(1, ...days.map(d => d.count));
+    bars.innerHTML = days.map(d =>
+      `<div class="rb ${d.count === 0 ? 'zero' : ''}" style="height:${Math.round(d.count / maxC * 100)}%" title="${monthDay(d.key)}（周${'日一二三四五六'[d.dow]}）：投递 ${d.count} 次"></div>`
+    ).join('');
+    const daysEl = document.getElementById('svRhythmDays');
+    if (daysEl) daysEl.innerHTML = days.map(d => `<span>周${'日一二三四五六'[d.dow]}</span>`).join('');
+    const total = days.reduce((a, d) => a + d.count, 0);
+    sum.textContent = `近7日投递 ${total} 次`;
+  }
+
+  function toDateKey(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+  function isTodayKey(key) { return key === toDateKey(new Date()); }
+  function monthDay(key) {
+    const p = key.split('-');
+    return `${p[1]}/${p[2]}`;
+  }
+
+  function renderStatusKeyDots() {
+    const container = document.getElementById('statusKey');
+    const dotMap = {
+      '已投简历': '#2a78d6',
+      '已过初筛': '#1baf7a',
+      '面试':     '#eb6834',
+      '待AI面试': '#14b8a6',
+      '待线上测评': '#e0519c',
+      'hr筛选':   '#4a3aa7',
+      '业务筛选': '#eda100',
+      '挂':       '#e34948',
+      '评估中':   '#3987e5',
+      '等offer':  '#0ca30c',
+    };
+    container.innerHTML = STATUSES.map(s => {
+      const dot = dotMap[s] || '#898781';
+      return `<span class="key-item">
+        <span class="key-dot" style="background:${dot}"></span>
+        ${s}
+      </span>`;
+    }).join('');
+  }
+
+
+  function esc(str) {
+    if (!str) return '';
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  // 把文本中的 http(s) 链接渲染成可点击链接（先转义再串回）
+  function linkifyText(str) {
+    if (!str) return '';
+    const escaped = esc(str);
+    return escaped.replace(
+      /(https?:\/\/[^\s]+)/g,
+      '<a href="$1" target="_blank" rel="noopener" style="color:var(--series-1);text-decoration:underline">$1</a>'
+    );
+  }
+
+  // ===== Modal =====
+  const overlay = document.getElementById('modalOverlay');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalCompany = document.getElementById('modalCompany');
+  const modalBase = document.getElementById('modalBase');
+  const modalPosition = document.getElementById('modalPosition');
+  const modalStatus = document.getElementById('modalStatus');
+  const modalDate = document.getElementById('modalDate');
+  const modalNote = document.getElementById('modalNote');
+  const modalCancel = document.getElementById('modalCancel');
+  const modalSave = document.getElementById('modalSave');
+
+  function openModal(record) {
+    editingId = record ? record.id : null;
+    modalTitle.textContent = record ? '编辑投递' : '新增投递';
+    modalCompany.value = record ? record.company : '';
+    modalBase.value = record ? (record.base || '') : '';
+    modalPosition.value = record ? record.position : '';
+    modalStatus.value = record ? record.status : '已投简历';
+    modalDate.value = record ? (record.date || '') : new Date().toISOString().slice(0, 10);
+    modalNote.value = record ? (record.note || '') : '';
+    hideDupHint();                       // 打开弹窗时清空重复提示
+    overlay.classList.add('active');
+    modalCompany.focus();
+  }
+
+  function closeModal() {
+    overlay.classList.remove('active');
+    editingId = null;
+    hideDupHint();
+  }
+
+  // ===== 关注清单重复检测（仅新增投递时，输入企业名实时提示）=====
+  const dupHint = document.getElementById('dupHint');
+  const dupHintText = document.getElementById('dupHintText');
+  let dupMatchWatch = null;              // 当前提示对应的关注项
+
+  function findDuplicateWatch(companyName) {
+    const name = (companyName || '').trim().toLowerCase();
+    if (!name) return null;
+    return watchItems.find(w => {
+      const wName = (w.company || '').trim().toLowerCase();
+      if (!wName) return false;
+      return name.includes(wName) || wName.includes(name);   // 大小写不敏感
+    });
+  }
+
+  function showDupHint(item) {
+    dupMatchWatch = item;
+    dupHintText.textContent = `关注清单里已有「${item.company}」，可一键转投递`;
+    dupHint.style.display = 'flex';
+  }
+  function hideDupHint() {
+    dupHint.style.display = 'none';
+    dupMatchWatch = null;
+  }
+
+  // 输入企业名时实时检测（仅新增）
+  modalCompany.addEventListener('input', () => {
+    if (editingId) { hideDupHint(); return; }
+    const item = findDuplicateWatch(modalCompany.value);
+    if (item) showDupHint(item);
+    else hideDupHint();
+  });
+
+  // 「转为投递」：把该关注项信息填入本弹窗，并从关注清单移除
+  document.getElementById('dupGoBtn').addEventListener('click', () => {
+    if (!dupMatchWatch) { hideDupHint(); return; }
+    const item = dupMatchWatch;
+    modalCompany.value = item.company;
+    if (!modalBase.value) modalBase.value = item.base || '';
+    if (!modalPosition.value) modalPosition.value = item.position || '';
+    if (!modalNote.value) {
+      modalNote.value = item.note ? item.note + '（来自关注清单）' : '来自关注清单';
+    } else {
+      modalNote.value = modalNote.value + (item.note ? '（关注清单备注：' + item.note + '）' : '');
+    }
+    watchItems = watchItems.filter(w => w.id !== item.id);
+    saveWatch();
+    renderWatchlist();
+    hideDupHint();
+    modalPosition.focus();
+  });
+
+  // 「忽略」：关闭提示，照常手动新增
+  document.getElementById('dupIgnoreBtn').addEventListener('click', hideDupHint);
+
+  document.getElementById('openAddBtn').addEventListener('click', () => openModal(null));
+
+  // ===== 快速新增投递 =====
+  function quickAdd() {
+    const company = document.getElementById('qaCompany').value.trim();
+    if (!company) { document.getElementById('qaCompany').focus(); return; }
+    records.push({
+      id: uid(),
+      company,
+      base: '',
+      position: document.getElementById('qaPosition').value.trim(),
+      status: document.getElementById('qaStatus').value,
+      date: new Date().toISOString().slice(0, 10),
+      note: '',
+    });
+    saveRecords();
+    render();
+    document.getElementById('qaCompany').value = '';
+    document.getElementById('qaPosition').value = '';
+    document.getElementById('qaStatus').value = '已投简历';
+    document.getElementById('qaCompany').focus();
+  }
+  document.getElementById('qaAddBtn').addEventListener('click', quickAdd);
+  document.getElementById('qaCompany').addEventListener('keydown', (e) => { if (e.key === 'Enter') quickAdd(); });
+  document.getElementById('qaPosition').addEventListener('keydown', (e) => { if (e.key === 'Enter') quickAdd(); });
+  document.getElementById('qaStatus').addEventListener('keydown', (e) => { if (e.key === 'Enter') quickAdd(); });
+
+  modalCancel.addEventListener('click', closeModal);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+  // 在弹窗内按回车直接保存（textarea 内不换行触发、保持叠层节）
+  overlay.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || !overlay.classList.contains('active')) return;
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+    saveOnEnter();
+  });
+
+  function saveOnEnter() {
+    modalSave.click();
+  }
+
+  modalSave.addEventListener('click', () => {
+    const company = modalCompany.value.trim();
+    const position = modalPosition.value.trim();
+    if (!company) { modalCompany.focus(); return; }
+    if (!position) { modalPosition.focus(); return; }
+
+    const data = {
+      id: editingId || uid(),
+      company,
+      base: modalBase.value.trim(),
+      position,
+      status: modalStatus.value,
+      date: modalDate.value || new Date().toISOString().slice(0, 10),
+      note: modalNote.value.trim(),
+    };
+
+    if (editingId) {
+      const idx = records.findIndex(r => r.id === editingId);
+      if (idx !== -1) records[idx] = data;
+    } else {
+      records.push(data);
+    }
+
+    saveRecords();
+    closeModal();
+    render();
+  });
+
+  // ===== Watchlist modal =====
+  const wOverlay = document.getElementById('watchModalOverlay');
+  const wTitle = document.getElementById('watchModalTitle');
+  const wCompany = document.getElementById('watchModalCompany');
+  const wPosition = document.getElementById('watchModalPosition');
+  const wDate = document.getElementById('watchModalDate');
+  const wNote = document.getElementById('watchModalNote');
+  const wCancel = document.getElementById('watchModalCancel');
+  const wSave = document.getElementById('watchModalSave');
+  let editingWatchId = null;
+
+  function openWatchModal(item) {
+    editingWatchId = item ? item.id : null;
+    wTitle.textContent = item ? '编辑关注企业' : '添加关注企业';
+    wCompany.value = item ? item.company : '';
+    wPosition.value = item ? (item.position || '') : '';
+    wDate.value = item ? (item.expectedDate || '') : '';
+    wNote.value = item ? (item.note || '') : '';
+    wOverlay.classList.add('active');
+    setTimeout(() => wCompany.focus(), 0);
+  }
+
+  function closeWatchModal() {
+    wOverlay.classList.remove('active');
+    editingWatchId = null;
+  }
+
+  // 转投递：打开关注企业 → 自动填入投递 modal，并移除该关注项
+  function openWatchToApp(item) {
+    editingId = null;
+    modalTitle.textContent = '新增投递';
+    modalCompany.value = item.company;
+    modalBase.value = '';
+    modalPosition.value = item.position || '';
+    modalStatus.value = '已投简历';
+    modalDate.value = new Date().toISOString().slice(0, 10);
+    modalNote.value = (item.note ? item.note + '（来自关注清单）' : '来自关注清单');
+    closeWatchModal();
+    overlay.classList.add('active');
+    modalCompany.focus();
+    // 转走后者从关注清单移除
+    watchItems = watchItems.filter(w => w.id !== item.id);
+    saveWatch();
+    renderWatchlist();
+  }
+
+  document.getElementById('openWatchAddBtn').addEventListener('click', () => openWatchModal(null));
+
+  wCancel.addEventListener('click', closeWatchModal);
+  wOverlay.addEventListener('click', (e) => { if (e.target === wOverlay) closeWatchModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeWatchModal(); });
+
+  // 关注弹窗内按回车直接保存（textarea 内不触发）
+  wOverlay.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || !wOverlay.classList.contains('active')) return;
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+    wSave.click();
+  });
+
+  wSave.addEventListener('click', () => {
+    const company = wCompany.value.trim();
+    if (!company) { wCompany.focus(); return; }
+
+    const data = {
+      id: editingWatchId || uid(),
+      company,
+      position: wPosition.value.trim(),
+      expectedDate: wDate.value || '',
+      note: wNote.value.trim(),
+    };
+
+    if (editingWatchId) {
+      const idx = watchItems.findIndex(w => w.id === editingWatchId);
+      if (idx !== -1) watchItems[idx] = data;
+    } else {
+      watchItems.push(data);
+    }
+
+    saveWatch();
+    closeWatchModal();
+    renderWatchlist();
+  });
+
+  // ===== 排序下拉（替代原表头点击排序） =====
+  document.getElementById('filterSort').addEventListener('change', e => {
+    const [col, dir] = e.target.value.split('-');
+    sortCol = col;
+    sortDir = dir;
+    render();
+  });
+
+  // ===== 视图切换：详细（一行一家）/ 紧凑（一行四家） =====
+  const VIEW_KEY = 'autumn_recruit_view';
+  let recordsView = 'detail';
+  try {
+    const v = localStorage.getItem(VIEW_KEY);
+    if (v === 'compact' || v === 'detail') recordsView = v;
+  } catch {}
+  function setRecordsView(v) {
+    if (recordsView === v) return;
+    recordsView = v;
+    try { localStorage.setItem(VIEW_KEY, v); } catch {}
+    syncViewButtons();
+    render();
+  }
+  function syncViewButtons() {
+    document.getElementById('viewDetailBtn').classList.toggle('is-active', recordsView === 'detail');
+    document.getElementById('viewCompactBtn').classList.toggle('is-active', recordsView === 'compact');
+  }
+  document.getElementById('viewDetailBtn').addEventListener('click', () => setRecordsView('detail'));
+  document.getElementById('viewCompactBtn').addEventListener('click', () => setRecordsView('compact'));
+  syncViewButtons();
+
+  // ===== Filters =====
+  document.getElementById('filterSearch').addEventListener('input', render);
+  document.getElementById('filterStatus').addEventListener('change', render);
+  document.getElementById('resetFiltersBtn').addEventListener('click', () => {
+    document.getElementById('filterSearch').value = '';
+    document.getElementById('filterStatus').value = '';
+    document.getElementById('filterSort').value = 'date-desc';
+    // 重置后回到默认排序：投递日期最新在最上面
+    sortCol = 'date';
+    sortDir = 'desc';
+    render();
+  });
+
+  // ===== Theme toggle（并入左侧导航栏，与「各大企业 / 央国企 / 日程规划」并列）=====
+  const themeBtn = document.createElement('button');
+  themeBtn.type = 'button';
+  themeBtn.className = 'sb-theme';
+  themeBtn.title = '切换浅色 / 深色主题';
+  themeBtn.innerHTML = '<span class="sb-icon" id="themeIcon">☀️</span><span class="sb-name">切换主题</span>';
+  const themeIcon = () => document.getElementById('themeIcon');
+  const paintTheme = (mode) => {
+    if (themeIcon()) themeIcon().textContent = mode === 'dark' ? '🌙' : '☀️';
+    themeBtn.title = mode === 'dark' ? '切换为浅色主题' : '切换为深色主题';
+  };
+  const sidebarEl = document.getElementById('sidebar');
+  if (sidebarEl) {
+    const sep = document.createElement('div');
+    sep.className = 'sb-sep sb-sep-auto';
+    sidebarEl.appendChild(sep);
+    sidebarEl.appendChild(themeBtn);
+  } else {
+    document.body.prepend(themeBtn);
+  }
+  themeBtn.addEventListener('click', () => {
+    const root = document.documentElement;
+    const current = root.getAttribute('data-theme') || 'light';
+    const next = current === 'light' ? 'dark' : 'light';
+    root.setAttribute('data-theme', next);
+    paintTheme(next);
+  });
+
+  // Synced with system on first load
+  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    if (!document.documentElement.getAttribute('data-theme')) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      paintTheme('dark');
+    }
+  } else {
+    paintTheme(document.documentElement.getAttribute('data-theme') || 'light');
+  }
+
+  // ===== 吸顶导航：点击平滑滚动到对应区块 =====
+  const navButtons = Array.from(document.querySelectorAll('#navBar .nav-btn'));
+  const navSections = navButtons.map(btn => {
+    const el = document.getElementById(btn.dataset.target);
+    return { btn, el };
+  }).filter(s => s.el);
+
+  navSections.forEach(({ btn, el }) => {
+    btn.addEventListener('click', () => {
+      const offset = 56; // 避开吸顶导航遮挡
+      const top = el.getBoundingClientRect().top + window.pageYOffset - offset;
+      window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    });
+  });
+
+  // 滚动时高亮当前所在区块对应的导航按钮
+  function updateActiveNav() {
+    const probe = window.scrollY + 90;
+    let currentEl = null;
+    navSections.forEach(({ el }) => {
+      if (el.offsetTop <= probe) currentEl = el;
+    });
+    navButtons.forEach(b => b.classList.remove('is-active'));
+    const match = navSections.find(s => s.el === currentEl);
+    if (match) match.btn.classList.add('is-active');
+  }
+  window.addEventListener('scroll', updateActiveNav, { passive: true });
+
+  // ===== 返回顶部按钮 =====
+  const backTopBtn = document.getElementById('backTopBtn');
+  function updateBackTop() {
+    backTopBtn.classList.toggle('show', window.scrollY > 400);
+  }
+  window.addEventListener('scroll', updateBackTop, { passive: true });
+  backTopBtn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // ===== 板块折叠：筛子 / 关注清单 各自独立展开收起（状态记忆） =====
+  function bindCollapse(sectionId, btnId, storageKey, defaultCollapsed) {
+    const section = document.getElementById(sectionId);
+    const btn = document.getElementById(btnId);
+    if (!section || !btn) return;
+    let collapsed = defaultCollapsed;
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved === '1') collapsed = true;
+      if (saved === '0') collapsed = false;
+    } catch {}
+    section.classList.toggle('collapsed', collapsed);
+    btn.addEventListener('click', () => {
+      const now = !section.classList.contains('collapsed');
+      section.classList.toggle('collapsed', now);
+      try { localStorage.setItem(storageKey, now ? '1' : '0'); } catch {}
+    });
+  }
+  bindCollapse('watchlistSection', 'watchlistToggleBtn', 'autumn_recruit_watch_collapsed', true);
+  bindCollapse('sieveSection', 'sieveToggleBtn', 'autumn_recruit_sieve_collapsed', false);
+
+  // ===== 赛道切换 + 可折叠侧边栏 =====
+  function trackRecordCount(track) {
+    try {
+      const raw = localStorage.getItem(TRACKS[track].keys.records);
+      return raw ? JSON.parse(raw).length : 0;
+    } catch { return 0; }
+  }
+  function updateSidebarCounts() {
+    document.getElementById('sbCountCompany').textContent = trackRecordCount('company');
+    document.getElementById('sbCountSoe').textContent = trackRecordCount('soe');
+  }
+  function updateTrackUI() {
+    document.querySelectorAll('.sidebar .sb-track').forEach(btn => {
+      btn.classList.toggle('is-active', btn.dataset.track === currentTrack);
+    });
+    const t = TRACKS[currentTrack];
+    document.getElementById('trackChip').textContent = `${t.icon} ${t.name}`;
+    const schedSel = document.getElementById('schedTrackSelect');
+    if (schedSel) schedSel.value = currentTrack;
+    updateSidebarCounts();
+  }
+  async function switchTrack(track) {
+    if (track === currentTrack || !TRACKS[track]) return;
+    currentTrack = track;
+    try { localStorage.setItem(TRACK_KEY, track); } catch {}
+    // 先切换高亮/徽章，再重渲染（即使渲染出错，侧边栏状态也不会卡住）
+    updateTrackUI();
+    // 换一套数据并整体重渲染（投递记录 / 关注清单 / 秋招筛子 / 日程规划）
+    await loadRecords();
+    await loadWatch();
+    await loadSieve();
+    await loadSchedule();
+    renderWatchlist();
+    renderSieve();
+    renderSidebarSchedule();
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  // 视图切换：投递数据（各大企业/央国企） vs 日程规划，二者互斥、点击侧边栏打开
+  function setView(v) {
+    currentView = v;
+    document.body.classList.toggle('view-schedule', v === 'schedule');
+    const mainView = document.getElementById('mainTrackView');
+    const schedView = document.getElementById('scheduleView');
+    if (mainView) { mainView.classList.toggle('hidden', v === 'schedule'); mainView.style.display = v === 'schedule' ? 'none' : ''; }
+    if (schedView) { schedView.classList.toggle('active', v === 'schedule'); schedView.style.display = v === 'schedule' ? 'block' : ''; }
+    const schedSel = document.getElementById('schedTrackSelect');
+    if (schedSel) schedSel.value = currentTrack;
+    document.querySelectorAll('.sidebar .sb-track').forEach(b => {
+      const isTrack = !!b.dataset.track;
+      const active = isTrack ? (v === 'track' && b.dataset.track === currentTrack) : (v === 'schedule');
+      b.classList.toggle('is-active', active);
+    });
+    if (v === 'schedule') renderSidebarSchedule();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  // ===== 日程规划标题旁：赛道下拉框（自由切换，与侧边栏赛道联动）=====
+  (function initSchedTrackSelect() {
+    const sel = document.getElementById('schedTrackSelect');
+    if (!sel) return;
+    Object.keys(TRACKS).forEach(k => {
+      const opt = document.createElement('option');
+      opt.value = k;
+      opt.textContent = `${TRACKS[k].icon} ${TRACKS[k].name}`;
+      sel.appendChild(opt);
+    });
+    sel.value = currentTrack;
+    sel.addEventListener('change', async () => {
+      const v = sel.value;
+      if (!TRACKS[v] || v === currentTrack) { sel.value = currentTrack; return; }
+      sel.disabled = true;
+      try {
+        await switchTrack(v);
+      } finally {
+        sel.value = currentTrack;
+        sel.disabled = false;
+      }
+      if (currentView === 'schedule') renderSidebarSchedule();
+    });
+  })();
+
+  document.querySelectorAll('.sidebar .sb-track').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.track) { switchTrack(btn.dataset.track); setView('track'); }
+      else if (btn.dataset.view === 'schedule') { setView('schedule'); }
+    });
+  });
+
+  // 侧边栏折叠/展开（记忆状态）
+  const sbToggle = document.getElementById('sbToggle');
+  const SB_COLLAPSED_KEY = 'autumn_recruit_sb_collapsed';
+  function applySidebarCollapsed(collapsed) {
+    document.body.classList.toggle('sb-collapsed', collapsed);
+    sbToggle.textContent = collapsed ? '»' : '«';
+    sbToggle.title = collapsed ? '展开侧边栏' : '折叠侧边栏';
+    try { localStorage.setItem(SB_COLLAPSED_KEY, collapsed ? '1' : '0'); } catch {}
+  }
+  sbToggle.addEventListener('click', () => {
+    applySidebarCollapsed(!document.body.classList.contains('sb-collapsed'));
+  });
+
+  // 云端同步状态徽标（仅提示，不参与逻辑）
+  function showCloudBadge() {
+    const b = document.createElement('div');
+    b.id = 'cloudBadge';
+    b.textContent = online.on ? '☁ 云端在线 · 自动同步' : '☁ 本地模式';
+    b.title = online.on ? '数据存储在资料库，多设备自动同步' : '当前为本地文件：数据仅存于本浏览器（请通过资料库在线链接打开以启用云同步）';
+    document.body.appendChild(b);
+  }
+
+  // ===== Init（异步：先拉取线上数据再渲染） =====
+  async function boot() {
+    // 恢复上次停留的赛道
+    try {
+      const savedTrack = localStorage.getItem(TRACK_KEY);
+      if (savedTrack && TRACKS[savedTrack]) currentTrack = savedTrack;
+    } catch {}
+    await loadRecords();
+    await loadWatch();
+    await loadSieve();
+    await loadSchedule();
+    renderStatusKeyDots();
+    renderWatchlist();
+    renderSieve();
+    renderSidebarSchedule();
+    render();
+    updateActiveNav();
+    updateBackTop();
+    updateTrackUI();
+    // 侧边栏初始折叠状态：有记忆用记忆，小屏默认折叠为图标栏
+    let sbPref = null;
+    try { sbPref = localStorage.getItem(SB_COLLAPSED_KEY); } catch {}
+    if (sbPref === null && window.innerWidth <= 640) sbPref = '1';
+    applySidebarCollapsed(sbPref === '1');
+    showCloudBadge();
+  }
+  boot();
+})();</script>
+
+<script>
+/* ==== OfferBeacon：原生下拉/日期弹层的页面内替换（暗色适配） ==== */
+(function () {
+  var root = document.getElementById('app') || document.body;
+  var pop = null, popSrc = null;
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  function closePop() {
+    if (!pop) return;
+    pop.remove(); pop = null; popSrc = null;
+    document.removeEventListener('pointerdown', onDocDown, true);
+    window.removeEventListener('scroll', onScrollClose, true);
+    window.removeEventListener('resize', closePop);
+  }
+  function onDocDown(e) {
+    if (pop && !pop.contains(e.target) && !popSrc.contains(e.target)) closePop();
+  }
+  function onScrollClose() { closePop(); }
+
+  function placePop(src) {
+    var r = src.getBoundingClientRect();
+    pop.style.minWidth = Math.max(r.width, 150) + 'px';
+    var pw = pop.offsetWidth, ph = pop.offsetHeight;
+    var top = (window.innerHeight - r.bottom - 10 < Math.min(ph, 260) && r.top - 10 > ph)
+      ? Math.max(8, r.top - ph - 6) : (r.bottom + 4);
+    pop.style.top = top + 'px';
+    pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - pw - 8)) + 'px';
+  }
+
+  function makePop(src, build) {
+    closePop();
+    pop = document.createElement('div');
+    pop.className = 'ux-pop';
+    build(pop);
+    root.appendChild(pop);
+    placePop(src);
+    popSrc = src;
+    setTimeout(function () {
+      document.addEventListener('pointerdown', onDocDown, true);
+      window.addEventListener('scroll', onScrollClose, true);
+      window.addEventListener('resize', closePop);
+    }, 0);
+  }
+
+  /* ---- 下拉列表 ---- */
+  function openSelectPop(sel) {
+    makePop(sel, function (box) {
+      Array.prototype.forEach.call(sel.options, function (opt) {
+        var it = document.createElement('div');
+        it.className = 'ux-opt' + (opt.selected ? ' is-sel' : '');
+        it.textContent = opt.textContent;
+        it.addEventListener('click', function () {
+          if (sel.value !== opt.value) {
+            sel.value = opt.value;
+            sel.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          closePop();
+        });
+        box.appendChild(it);
+      });
+    });
+  }
+
+  /* ---- 日历 + 时间 ---- */
+  function openDatePop(inp) {
+    var isDT = inp.type === 'datetime-local';
+    var cur = new Date();
+    if (inp.value) {
+      var parsed = new Date(inp.value.length > 10 ? inp.value : inp.value + 'T00:00');
+      if (!isNaN(parsed)) cur = parsed;
+    }
+    var view = new Date(cur.getFullYear(), cur.getMonth(), 1);
+    var selDay = inp.value ? cur.getDate() : null;
+    var hh = isDT ? cur.getHours() : 9;
+    var mm = isDT ? cur.getMinutes() : 0;
+
+    function fmt() {
+      var d = (selDay === null) ? new Date() : new Date(view.getFullYear(), view.getMonth(), selDay);
+      return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    }
+    function commit(val) {
+      inp.value = val;
+      inp.dispatchEvent(new Event('change', { bubbles: true }));
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+      closePop();
+    }
+
+    function render(box) {
+      box.innerHTML = '';
+      var head = document.createElement('div');
+      head.className = 'ux-cal-head';
+      var prev = document.createElement('button'); prev.type = 'button'; prev.className = 'ux-nav'; prev.textContent = '‹';
+      var title = document.createElement('div'); title.className = 'ux-mtitle';
+      title.textContent = view.getFullYear() + ' 年 ' + (view.getMonth() + 1) + ' 月';
+      var next = document.createElement('button'); next.type = 'button'; next.className = 'ux-nav'; next.textContent = '›';
+      prev.addEventListener('click', function () { view = new Date(view.getFullYear(), view.getMonth() - 1, 1); render(box); });
+      next.addEventListener('click', function () { view = new Date(view.getFullYear(), view.getMonth() + 1, 1); render(box); });
+      head.appendChild(prev); head.appendChild(title); head.appendChild(next);
+      box.appendChild(head);
+
+      var grid = document.createElement('div'); grid.className = 'ux-cal-grid';
+      ['日','一','二','三','四','五','六'].forEach(function (w) {
+        var wd = document.createElement('div'); wd.className = 'ux-cal-wd'; wd.textContent = w; grid.appendChild(wd);
+      });
+      var first = new Date(view.getFullYear(), view.getMonth(), 1).getDay();
+      var days = new Date(view.getFullYear(), view.getMonth() + 1, 0).getDate();
+      var todayKey = new Date();
+      var i, d;
+      for (i = 0; i < first; i++) grid.appendChild(document.createElement('div'));
+      for (i = 1; i <= days; i++) {
+        d = document.createElement('div');
+        d.className = 'ux-cal-day';
+        d.textContent = i;
+        if (i === todayKey.getDate() && view.getMonth() === todayKey.getMonth() && view.getFullYear() === todayKey.getFullYear()) d.classList.add('is-today');
+        if (i === selDay) d.classList.add('is-sel');
+        (function (day) {
+          d.addEventListener('click', function () {
+            var dd = new Date(view.getFullYear(), view.getMonth(), day);
+            var key = dd.getFullYear() + '-' + pad(dd.getMonth() + 1) + '-' + pad(dd.getDate());
+            if (!isDT) { commit(key); return; }
+            selDay = day; render(box);
+          });
+        })(i);
+        grid.appendChild(d);
+      }
+      box.appendChild(grid);
+
+      if (isDT) {
+        var tsec = document.createElement('div'); tsec.className = 'ux-cal-time';
+        [['时', hh, 23, function (v) { hh = v; }], ['分', mm, 59, function (v) { mm = v; }]].forEach(function (cfg) {
+          var col = document.createElement('div'); col.className = 'ux-time-col';
+          var lb = document.createElement('div'); lb.className = 'ux-tlabel'; lb.textContent = cfg[0]; col.appendChild(lb);
+          var list = document.createElement('div'); list.className = 'ux-time-list';
+          for (var v = 0; v <= cfg[2]; v++) {
+            (function (vv) {
+              var it = document.createElement('div');
+              it.className = 'ux-time-item' + (vv === cfg[1] ? ' is-sel' : '');
+              it.textContent = pad(vv);
+              it.addEventListener('click', function () { cfg[3](vv); render(box); });
+              list.appendChild(it);
+            })(v);
+          }
+          col.appendChild(list);
+          tsec.appendChild(col);
+        });
+        box.appendChild(tsec);
+      }
+
+      var foot = document.createElement('div'); foot.className = 'ux-cal-foot';
+      var clear = document.createElement('button'); clear.type = 'button'; clear.textContent = '清空';
+      clear.addEventListener('click', function () { commit(''); });
+      foot.appendChild(clear);
+      var nowBtn = document.createElement('button'); nowBtn.type = 'button';
+      nowBtn.textContent = isDT ? '此刻' : '今天';
+      nowBtn.addEventListener('click', function () {
+        var n = new Date();
+        commit(isDT
+          ? n.getFullYear() + '-' + pad(n.getMonth() + 1) + '-' + pad(n.getDate()) + 'T' + pad(n.getHours()) + ':' + pad(n.getMinutes())
+          : n.getFullYear() + '-' + pad(n.getMonth() + 1) + '-' + pad(n.getDate()));
+      });
+      foot.appendChild(nowBtn);
+      if (isDT) {
+        var ok = document.createElement('button'); ok.type = 'button'; ok.className = 'ux-primary'; ok.textContent = '确定';
+        ok.addEventListener('click', function () {
+          var base = (selDay === null) ? new Date() : new Date(view.getFullYear(), view.getMonth(), selDay);
+          commit(base.getFullYear() + '-' + pad(base.getMonth() + 1) + '-' + pad(base.getDate()) + 'T' + pad(hh) + ':' + pad(mm));
+        });
+        foot.appendChild(ok);
+      }
+      box.appendChild(foot);
+    }
+
+    makePop(inp, function (box) { box.classList.add('ux-cal'); render(box); });
+  }
+
+  function enhance(sel) {
+    if (!sel || sel.__uxEnhanced) return;
+    sel.__uxEnhanced = true;
+    sel.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    sel.addEventListener('click', function (e) { e.preventDefault(); if (!sel.disabled) openSelectPop(sel); });
+  }
+  function enhanceDate(inp) {
+    if (!inp || inp.__uxEnhanced) return;
+    inp.__uxEnhanced = true;
+    inp.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    inp.addEventListener('click', function (e) { e.preventDefault(); openDatePop(inp); });
+  }
+
+  document.querySelectorAll('select').forEach(enhance);
+  document.querySelectorAll('input[type="date"], input[type="datetime-local"]').forEach(enhanceDate);
+})();
+</script>
+</body>
+</html>
