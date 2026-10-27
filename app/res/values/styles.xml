@@ -6,5 +6,14 @@
         <item name="android:navigationBarColor">#FFFFFF</item>
         <item name="android:colorAccent">#6366F1</item>
     </style>
+
+    <!-- 页内黑暗模式对应的原生主题：下拉弹层 / 日期时间弹框由 Activity 主题渲染，
+         页内切换黑暗模式时通过 JS 桥调用 setTheme 切到本主题（AppTheme 浅色态保持不变） -->
+    <style name="AppTheme.Dark" parent="@android:style/Theme.DeviceDefault.NoActionBar">
+        <item name="android:windowBackground">#0D1524</item>
+        <item name="android:statusBarColor">#0D1524</item>
+        <item name="android:navigationBarColor">#0D1524</item>
+        <item name="android:colorAccent">#6366F1</item>
+    </style>
     <color name="brand_bg">#F4F5FB</color>
 </resources>

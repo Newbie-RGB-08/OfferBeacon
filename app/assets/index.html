@@ -1818,6 +1818,21 @@
       color: #a7b4cf;
       box-shadow: 0 2px 10px rgba(0,0,0,0.4);
     }
+    :root:where(:not([data-theme="light"])) select option,
+    :root:where(:not([data-theme="light"])) input[type="datetime-local"] {
+      background-color: #0d1524;
+      color: #eaf2ff;
+    }
+  }
+
+  /* ===== 原生控件暗黑保险层 =====
+     下拉框收起态样式不变；仅为 option 展开列表与日期时间控件补暗色兜底，
+     使支持跟随页面 color-scheme 的 WebView 内核/桌面浏览器下弹层为暗底浅字。
+     （Android 原生弹层由 MainActivity 主题桥同步，此处为兼容层，不改任何功能与布局） */
+  :root[data-theme="dark"] select option,
+  :root[data-theme="dark"] input[type="datetime-local"] {
+    background-color: #0d1524;
+    color: #eaf2ff;
   }
 
   /* ==== OfferBeacon 移动端适配（6.1–6.8 英寸旗舰手机） ==== */
@@ -3679,6 +3694,13 @@
   const paintTheme = (mode) => {
     if (themeIcon()) themeIcon().textContent = mode === 'dark' ? '🌙' : '☀️';
     themeBtn.title = mode === 'dark' ? '切换为浅色主题' : '切换为深色主题';
+    // 同步原生壳主题（APK 内 select 弹层 / 日期时间弹框由 Activity 主题渲染）；
+    // 浏览器直接打开时无桥接对象，静默降级
+    try {
+      if (window.OfferBeaconTheme && typeof window.OfferBeaconTheme.setTheme === 'function') {
+        window.OfferBeaconTheme.setTheme(mode === 'dark' ? 'dark' : 'light');
+      }
+    } catch (e) { /* ignore */ }
   };
   const sidebarEl = document.getElementById('sidebar');
   if (sidebarEl) {

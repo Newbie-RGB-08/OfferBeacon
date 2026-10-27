@@ -4,12 +4,14 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -37,25 +39,35 @@ public class MainActivity extends Activity {
     private static final String START_URL = "https://" + HOST + "/index.html";
     private static final String ENTRY_ASSET = "index.html";
     private static final String BG_COLOR = "#F4F5FB";
+    private static final String BG_COLOR_DARK = "#0D1524";
+    private static final String PREFS = "offerbeacon_prefs";
+    private static final String KEY_THEME = "ui_theme";
 
     private WebView webView;
     private long lastBackPressedAt = 0L;
+    /** 原生侧当前主题（跟随页内黑暗模式切换，决定 select 弹层 / 日期弹框配色） */
+    private boolean darkTheme = false;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // 恢复上次主题，避免冷启动时原生弹层与页内主题短暂不一致
+        darkTheme = "dark".equals(
+                getSharedPreferences(PREFS, MODE_PRIVATE).getString(KEY_THEME, "light"));
+        setTheme(darkTheme ? R.style.AppTheme_Dark : R.style.AppTheme);
         applySystemBars();
 
         FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(Color.parseColor(BG_COLOR));
+        root.setBackgroundColor(currentBgColor());
         root.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         webView = new WebView(this);
         webView.setLayoutParams(new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        webView.setBackgroundColor(Color.parseColor(BG_COLOR));
+        webView.setBackgroundColor(currentBgColor());
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         configureWebView(webView);
 
@@ -70,18 +82,60 @@ public class MainActivity extends Activity {
         }
     }
 
+    private int currentBgColor() {
+        return Color.parseColor(darkTheme ? BG_COLOR_DARK : BG_COLOR);
+    }
+
+    /** 系统栏颜色与前景图标随页内主题切换（浅色态保持原样） */
     private void applySystemBars() {
+        int bg = currentBgColor();
+        int nav = darkTheme ? bg : Color.WHITE;
+        getWindow().setStatusBarColor(bg);
+        getWindow().setNavigationBarColor(nav);
         int flags = 0;
-        getWindow().setStatusBarColor(Color.parseColor(BG_COLOR));
-        getWindow().setNavigationBarColor(Color.WHITE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+        if (!darkTheme) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+            }
         }
         View decor = getWindow().getDecorView();
         decor.setSystemUiVisibility(flags);
+    }
+
+    /**
+     * 页内黑暗模式切换 → 原生侧同步。
+     * 运行时 setTheme 只影响之后弹出的原生对话框（select 弹层、日期/时间弹框），
+     * 不影响已渲染的 WebView 内容；页面配色仍由 index.html 自身的 data-theme 管理。
+     */
+    private void applyThemeMode(String mode) {
+        final boolean dark = "dark".equals(mode);
+        if (dark == darkTheme) {
+            return;
+        }
+        darkTheme = dark;
+        setTheme(dark ? R.style.AppTheme_Dark : R.style.AppTheme);
+        getSharedPreferences(PREFS, MODE_PRIVATE)
+                .edit().putString(KEY_THEME, dark ? "dark" : "light").apply();
+        applySystemBars();
+        if (webView != null) {
+            webView.setBackgroundColor(currentBgColor());
+        }
+    }
+
+    /** 页内主题桥（命名内部类，规避 d8 对匿名类的已知崩溃） */
+    public class ThemeBridge {
+        @JavascriptInterface
+        public void setTheme(final String mode) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    applyThemeMode(mode);
+                }
+            });
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -109,6 +163,9 @@ public class MainActivity extends Activity {
         }
 
         view.setWebViewClient(new LocalWebViewClient());
+
+        // 页内主题切换桥：index.html 切换黑暗模式时调用 OfferBeaconTheme.setTheme(mode)
+        view.addJavascriptInterface(new ThemeBridge(), "OfferBeaconTheme");
 
         view.setWebChromeClient(new LocalChromeClient());
     }
