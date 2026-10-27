@@ -27,7 +27,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * OfferBeacon —— 秋招投递记录工作台 · 移动端壳。
+ * OfferBeacon —— offer 灯台 · 移动端壳。
  *
  * 做法：把工作台 HTML 作为本地资产打包进 APK，通过虚拟域名 https://offerbeacon.local/
  * 交给 WebView 加载。使用 https 虚拟域名（而不是 file://）是为了让 localStorage 有稳定的
